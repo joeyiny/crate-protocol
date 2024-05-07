@@ -1,7 +1,6 @@
 //SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
-import "forge-std/Test.sol";
 import "lib/openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
@@ -25,6 +24,8 @@ interface IUniswapV2Router02 {
 
 contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
     address public uniswapV2Router02;
+
+    uint256 public constant SLIPPAGE_TOLERANCE = 250; // Slippage tolerance (500 basis points = 5%)
 
     uint256 private constant MAX_SUPPLY = 100_000 * 1e6;
     uint256 private constant MAX_CURVE_SUPPLY = 80_000 * 1e6;
@@ -111,6 +112,13 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
             msg.value >= totalPayment,
             "Not enough Ether to complete purchase."
         );
+        // Calculate the minimum amount of tokens that should be received based on the slippage tolerance
+        uint256 minTokens = _amount - ((_amount * SLIPPAGE_TOLERANCE) / 10_000);
+
+        require(
+            balanceOf(address(this)) >= minTokens,
+            "Slippage tolerance exceeded."
+        );
 
         _transfer(address(this), msg.sender, _amount);
         if (tokensInCurve() == 0) {
@@ -134,6 +142,16 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         uint256 crateFee = (price * CRATE_FEE_PERCENT) / 1 ether;
         uint256 artistFee = (price * ARTIST_FEE_PERCENT) / 1 ether;
         uint256 netSellerProceeds = price - crateFee - artistFee;
+
+        // Calculate the minimum Ether that should be received based on the slippage tolerance
+        uint256 minEther = netSellerProceeds -
+            ((netSellerProceeds * SLIPPAGE_TOLERANCE) / 10_000);
+
+        // Ensure the seller receives at least the minimum Ether after considering slippage
+        require(
+            address(this).balance >= minEther,
+            "Slippage tolerance exceeded."
+        );
 
         _transfer(msg.sender, address(this), _amount);
         emit TokenTrade(msg.sender, _amount, false, netSellerProceeds);
