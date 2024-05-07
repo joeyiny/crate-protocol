@@ -57,22 +57,6 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         address _artistAddress,
         string memory _songURI
     ) public initializer {
-        require(
-            _uniswapV2Router02 != address(0),
-            "UniswapV2 Router address cannot be zero"
-        );
-        require(
-            _protocolAddress != address(0),
-            "Protocol fee destination address cannot be zero"
-        );
-        require(
-            _artistAddress != address(0),
-            "Artist fee destination address cannot be zero"
-        );
-        require(bytes(_name).length > 0, "Name can't be empty");
-        require(bytes(_symbol).length > 0, "Symbol can't be empty");
-        require(bytes(_songURI).length > 0, "_songURI can't be empty");
-
         __ERC20_init(_name, _symbol);
         _mint(address(this), MAX_SUPPLY);
         artistFeeDestination = _artistAddress;
@@ -131,9 +115,22 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
             emit BondingCurveEnded();
         }
         emit TokenTrade(msg.sender, _amount, true, totalPayment);
-        payable(protocolFeeDestination).transfer(crateFee);
-        payable(artistFeeDestination).transfer(artistFee);
-        payable(msg.sender).transfer(msg.value - totalPayment);
+
+        (bool crateFeePaid, ) = protocolFeeDestination.call{value: crateFee}(
+            ""
+        );
+        require(crateFeePaid, "Failed to pay crate fee");
+
+        (bool artistFeePaid, ) = artistFeeDestination.call{value: artistFee}(
+            ""
+        );
+        require(artistFeePaid, "Failed to pay artist fee");
+
+        // Refund the remaining Ether to the buyer
+        (bool refundSuccess, ) = msg.sender.call{
+            value: msg.value - totalPayment
+        }("");
+        require(refundSuccess, "Refund failed");
 
         if (!bondingCurveActive) {
             _addLiquidity();
@@ -161,9 +158,20 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         _transfer(msg.sender, address(this), _amount);
         emit TokenTrade(msg.sender, _amount, false, netSellerProceeds);
 
-        payable(msg.sender).transfer(netSellerProceeds);
-        payable(protocolFeeDestination).transfer(crateFee);
-        payable(artistFeeDestination).transfer(artistFee);
+        (bool netProceedsSent, ) = msg.sender.call{value: netSellerProceeds}(
+            ""
+        );
+        require(netProceedsSent, "Failed to send net seller proceeds");
+
+        (bool crateFeePaid, ) = protocolFeeDestination.call{value: crateFee}(
+            ""
+        );
+        require(crateFeePaid, "Failed to pay crate fee");
+
+        (bool artistFeePaid, ) = artistFeeDestination.call{value: artistFee}(
+            ""
+        );
+        require(artistFeePaid, "Failed to pay artist fee");
     }
 
     function estimateMaxPurchase(
