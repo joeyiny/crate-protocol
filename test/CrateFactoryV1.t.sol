@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Vm.sol";
+import "forge-std/console.sol";
 import "ds-test/test.sol";
 import "../src/CrateFactoryV1.sol";
 
@@ -21,8 +22,14 @@ contract CrateFactoryV1Test is DSTest {
         string memory name = "TestToken";
         string memory symbol = "TTK";
         string memory songURI = "example.com";
+        bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
         address tokenAddress = address(
-            factory.createToken{value: 0.00125 ether}(name, symbol, songURI)
+            factory.createToken{value: 0.00125 ether}(
+                name,
+                symbol,
+                songURI,
+                salt
+            )
         );
 
         // Check if the token was created and if the event was emitted
@@ -47,8 +54,15 @@ contract CrateFactoryV1Test is DSTest {
             string memory name = string(abi.encodePacked("Token", i));
             string memory symbol = string(abi.encodePacked("SYM", i));
             string memory songURI = string(abi.encodePacked("example.com", i));
+
+            bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
             address tokenAddress = address(
-                factory.createToken{value: 0.00125 ether}(name, symbol, songURI)
+                factory.createToken{value: 0.00125 ether}(
+                    name,
+                    symbol,
+                    songURI,
+                    salt
+                )
             );
             assertEq(
                 factory.allTokens(i),
@@ -63,7 +77,9 @@ contract CrateFactoryV1Test is DSTest {
         string memory name = "FailToken";
         string memory symbol = "FTK";
         string memory songURI = "example.com";
-        factory.createToken{value: 0.0001 ether}(name, symbol, songURI); // Not enough ETH
+        bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
+
+        factory.createToken{value: 0.0001 ether}(name, symbol, songURI, salt); // Not enough ETH
     }
 
     function testCreateTokenWithRefund() public {
@@ -77,8 +93,10 @@ contract CrateFactoryV1Test is DSTest {
         string memory name = "ExcessToken";
         string memory symbol = "EXT";
         string memory songURI = "example.com";
+        bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
+
         address tokenAddress = address(
-            factory.createToken{value: sentAmount}(name, symbol, songURI)
+            factory.createToken{value: sentAmount}(name, symbol, songURI, salt)
         );
 
         // Ensure the token is created
@@ -120,8 +138,10 @@ contract CrateFactoryV1Test is DSTest {
         string memory name = "ExcessToken";
         string memory symbol = "EXT";
         string memory songURI = "example.com";
+        bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
+
         address tokenAddress = address(
-            factory.createToken{value: sentAmount}(name, symbol, songURI)
+            factory.createToken{value: sentAmount}(name, symbol, songURI, salt)
         );
 
         // Ensure the token is created
@@ -134,6 +154,34 @@ contract CrateFactoryV1Test is DSTest {
             finalBalance,
             expectedFinalBalance,
             "Excess ETH was not refunded correctly."
+        );
+    }
+
+    function testFailSameSalt() public {
+        string memory name = "UniqueToken";
+        string memory symbol = "UNQ";
+        string memory songURI = "unique.com";
+        bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
+
+        // First token creation should succeed
+        address firstClone = address(
+            factory.createToken{value: factory.launchCost()}(
+                name,
+                symbol,
+                songURI,
+                salt
+            )
+        );
+        assertTrue(firstClone != address(0), "First token creation failed");
+
+        // Second token creation with the same salt should fail
+        address secondClone = address(
+            factory.createToken{value: factory.launchCost()}(
+                name,
+                symbol,
+                songURI,
+                salt
+            )
         );
     }
 

@@ -57,7 +57,6 @@ contract CrateFactoryV1 is Ownable, ReentrancyGuard {
     }
 
     function crateTokenAddress(
-        address implementation,
         bytes32 salt
     ) public view returns (address addr, bool exists) {
         addr = Clones.predictDeterministicAddress(tokenImplementation, salt);
