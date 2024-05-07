@@ -29,10 +29,11 @@ contract CrateFactoryV1 is Ownable, ReentrancyGuard {
     function createToken(
         string memory name,
         string memory symbol,
-        string memory songURI
+        string memory songURI,
+        bytes32 salt
     ) public payable nonReentrant returns (address) {
         require(msg.value >= launchCost, "Insufficient ETH sent.");
-        address clone = Clones.clone(tokenImplementation);
+        address clone = Clones.cloneDeterministic(tokenImplementation, salt);
         CrateTokenV1 newToken = CrateTokenV1(clone);
         allTokens.push(address(newToken));
         emit TokenLaunched(address(newToken), name, symbol);
@@ -53,6 +54,14 @@ contract CrateFactoryV1 is Ownable, ReentrancyGuard {
         }
 
         return address(newToken);
+    }
+
+    function crateTokenAddress(
+        address implementation,
+        bytes32 salt
+    ) public view returns (address addr, bool exists) {
+        addr = Clones.predictDeterministicAddress(tokenImplementation, salt);
+        exists = addr.code.length != 0;
     }
 
     function updateLaunchCost(uint256 newCost) public onlyOwner {
