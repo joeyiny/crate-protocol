@@ -38,6 +38,8 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
     address public protocolFeeDestination;
     address public artistFeeDestination;
 
+    string public songURI;
+
     event TokenTrade(
         address trader,
         uint256 tokenAmount,
@@ -52,7 +54,8 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         string memory _name,
         string memory _symbol,
         address _protocolAddress,
-        address _artistAddress
+        address _artistAddress,
+        string memory _songURI
     ) public initializer {
         require(
             _uniswapV2Router02 != address(0),
@@ -68,12 +71,14 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         );
         require(bytes(_name).length > 0, "Name can't be empty");
         require(bytes(_symbol).length > 0, "Symbol can't be empty");
+        require(bytes(_songURI).length > 0, "_songURI can't be empty");
 
         __ERC20_init(_name, _symbol);
         _mint(address(this), MAX_SUPPLY);
         artistFeeDestination = _artistAddress;
         protocolFeeDestination = _protocolAddress;
         uniswapV2Router02 = _uniswapV2Router02;
+        songURI = _songURI;
         _approve(address(this), uniswapV2Router02, MAX_SUPPLY);
     }
 

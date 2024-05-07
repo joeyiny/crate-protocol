@@ -22,7 +22,8 @@ contract CrateTokenV1Test is DSTest {
             "CrateToken",
             "CTK",
             protocolFeeAddress,
-            artistAddress
+            artistAddress,
+            "http://example.com"
         );
         vm.deal(alice, 1000 ether);
         vm.deal(bob, 1000 ether);
@@ -30,17 +31,20 @@ contract CrateTokenV1Test is DSTest {
 
     function testFuzz_InitialSetup(
         string memory name,
-        string memory symbol
+        string memory symbol,
+        string memory songURI
     ) public {
         vm.assume(bytes(name).length > 0);
         vm.assume(bytes(symbol).length > 0);
+        vm.assume(bytes(songURI).length > 0);
         CrateTokenV1 token2 = new CrateTokenV1();
         token2.initialize(
             uniswapRouter,
             name,
             symbol,
             protocolFeeAddress,
-            artistAddress
+            artistAddress,
+            songURI
         );
         assertEq(token2.name(), name);
         assertEq(token2.symbol(), symbol);

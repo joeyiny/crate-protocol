@@ -28,7 +28,8 @@ contract CrateFactoryV1 is Ownable, ReentrancyGuard {
 
     function createToken(
         string memory name,
-        string memory symbol
+        string memory symbol,
+        string memory songURI
     ) public payable nonReentrant returns (address) {
         require(msg.value >= launchCost, "Insufficient ETH sent.");
         address clone = Clones.clone(tokenImplementation);
@@ -40,7 +41,8 @@ contract CrateFactoryV1 is Ownable, ReentrancyGuard {
             name,
             symbol,
             address(this),
-            msg.sender
+            msg.sender,
+            songURI
         );
 
         // Refund any excess ETH sent with the transaction

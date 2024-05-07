@@ -20,8 +20,9 @@ contract CrateFactoryV1Test is DSTest {
         // Send exactly the required ETH to create a token
         string memory name = "TestToken";
         string memory symbol = "TTK";
+        string memory songURI = "example.com";
         address tokenAddress = address(
-            factory.createToken{value: 0.00125 ether}(name, symbol)
+            factory.createToken{value: 0.00125 ether}(name, symbol, songURI)
         );
 
         // Check if the token was created and if the event was emitted
@@ -36,6 +37,7 @@ contract CrateFactoryV1Test is DSTest {
         CrateTokenV1 token = CrateTokenV1(tokenAddress);
         assertEq(token.name(), name, "Token name should match.");
         assertEq(token.symbol(), symbol, "Token symbol should match.");
+        assertEq(token.songURI(), songURI, "Song URI should match.");
     }
 
     function testCreateMultipleTokens() public {
@@ -44,8 +46,9 @@ contract CrateFactoryV1Test is DSTest {
         for (uint256 i = 0; i < numTokens; i++) {
             string memory name = string(abi.encodePacked("Token", i));
             string memory symbol = string(abi.encodePacked("SYM", i));
+            string memory songURI = string(abi.encodePacked("example.com", i));
             address tokenAddress = address(
-                factory.createToken{value: 0.00125 ether}(name, symbol)
+                factory.createToken{value: 0.00125 ether}(name, symbol, songURI)
             );
             assertEq(
                 factory.allTokens(i),
@@ -59,7 +62,8 @@ contract CrateFactoryV1Test is DSTest {
         // Attempt to create a token without sending enough ETH should fail
         string memory name = "FailToken";
         string memory symbol = "FTK";
-        factory.createToken{value: 0.0001 ether}(name, symbol); // Not enough ETH
+        string memory songURI = "example.com";
+        factory.createToken{value: 0.0001 ether}(name, symbol, songURI); // Not enough ETH
     }
 
     function testCreateTokenWithRefund() public {
@@ -72,8 +76,9 @@ contract CrateFactoryV1Test is DSTest {
         // Creating a token and sending more ETH than required
         string memory name = "ExcessToken";
         string memory symbol = "EXT";
+        string memory songURI = "example.com";
         address tokenAddress = address(
-            factory.createToken{value: sentAmount}(name, symbol)
+            factory.createToken{value: sentAmount}(name, symbol, songURI)
         );
 
         // Ensure the token is created
@@ -114,8 +119,9 @@ contract CrateFactoryV1Test is DSTest {
         // Creating a token and sending more ETH than required
         string memory name = "ExcessToken";
         string memory symbol = "EXT";
+        string memory songURI = "example.com";
         address tokenAddress = address(
-            factory.createToken{value: sentAmount}(name, symbol)
+            factory.createToken{value: sentAmount}(name, symbol, songURI)
         );
 
         // Ensure the token is created
