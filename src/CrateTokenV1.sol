@@ -3,26 +3,13 @@ pragma solidity ^0.8.24;
 
 import "lib/openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
 
 // The total supply is 100,000 tokens
 // Once the bonding curve has sold out 80,000 tokens, the other 20,000 are put in Uniswap with the total ETH in the contract.
 // The LP tokens are then burned, so no one can pull the liquidity.
 
-interface IUniswapV2Router02 {
-    function addLiquidityETH(
-        address token,
-        uint amountTokenDesired,
-        uint amountTokenMin,
-        uint amountETHMin,
-        address to,
-        uint deadline
-    )
-        external
-        payable
-        returns (uint amountToken, uint amountETH, uint liquidity);
-}
-
-contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
+contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, Context {
     address public uniswapV2Router02;
 
     uint256 public constant SLIPPAGE_TOLERANCE = 250; // Slippage tolerance (500 basis points = 5%)
@@ -65,11 +52,25 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         songURI = _songURI;
         _approve(address(this), uniswapV2Router02, MAX_SUPPLY);
     }
-
-    function decimals() public pure override returns (uint8) {
-        return 6;
+    
+    modifier ensure(uint deadline) {
+        require(deadline >= block.timestamp, 'CrateTokenV1: EXPIRED');
+        _;
     }
 
+    //override the update hook to dis allow transfers until bonding curve is over
+    function _update(
+        address from,
+        address to,
+        uint256 value
+    ) internal override(ERC20) {
+        if (from != address(this) || to != address(this)) {
+            require(!bondingCurveActive, "The bonding curve is still active.");
+        }
+        super._update(from, to, value);
+    }
+
+    //probably want to do this with weth
     function buyWithEth() external payable {
         // Take fees out of ETH, then see how many tokens you can buy with the remaining amount.
         uint256 cratePreFee = (msg.value * CRATE_FEE_PERCENT) / 1 ether;
@@ -109,12 +110,12 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
             "Slippage tolerance exceeded."
         );
 
-        _transfer(address(this), msg.sender, _amount);
+        _transfer(address(this), _msgSender(), _amount);
         if (tokensInCurve() == 0) {
             bondingCurveActive = false;
             emit BondingCurveEnded();
         }
-        emit TokenTrade(msg.sender, _amount, true, totalPayment);
+        emit TokenTrade(_msgSender(), _amount, true, totalPayment);
 
         (bool crateFeePaid, ) = protocolFeeDestination.call{value: crateFee}(
             ""
@@ -127,7 +128,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         require(artistFeePaid, "Failed to pay artist fee");
 
         // Refund the remaining Ether to the buyer
-        (bool refundSuccess, ) = msg.sender.call{
+        (bool refundSuccess, ) = _msgSender().call{
             value: msg.value - totalPayment
         }("");
         require(refundSuccess, "Refund failed");
@@ -139,7 +140,10 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
 
     function sell(uint256 _amount) external nonReentrant {
         require(bondingCurveActive, "Bonding curve ended");
-        require(balanceOf(msg.sender) >= _amount, "Not enough tokens to sell");
+        require(
+            balanceOf(_msgSender()) >= _amount,
+            "Not enough tokens to sell"
+        );
         uint256 price = getSellPrice(_amount);
         uint256 crateFee = (price * CRATE_FEE_PERCENT) / 1 ether;
         uint256 artistFee = (price * ARTIST_FEE_PERCENT) / 1 ether;
@@ -155,10 +159,10 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
             "Slippage tolerance exceeded."
         );
 
-        _transfer(msg.sender, address(this), _amount);
-        emit TokenTrade(msg.sender, _amount, false, netSellerProceeds);
+        _transfer(_msgSender(), address(this), _amount);
+        emit TokenTrade(_msgSender(), _amount, false, netSellerProceeds);
 
-        (bool netProceedsSent, ) = msg.sender.call{value: netSellerProceeds}(
+        (bool netProceedsSent, ) = _msgSender().call{value: netSellerProceeds}(
             ""
         );
         require(netProceedsSent, "Failed to send net seller proceeds");
