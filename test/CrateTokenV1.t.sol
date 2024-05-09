@@ -18,35 +18,17 @@ contract CrateTokenV1Test is DSTest {
 
     function setUp() public {
         token = new CrateTokenV1();
-        token.initialize(
-            uniswapRouter,
-            "CrateToken",
-            "CTK",
-            protocolFeeAddress,
-            artistAddress,
-            "http://example.com"
-        );
+        token.initialize(uniswapRouter, "CrateToken", "CTK", protocolFeeAddress, artistAddress, "http://example.com");
         vm.deal(alice, 1000 ether);
         vm.deal(bob, 1000 ether);
     }
 
-    function testFuzz_InitialSetup(
-        string memory name,
-        string memory symbol,
-        string memory songURI
-    ) public {
+    function testFuzz_InitialSetup(string memory name, string memory symbol, string memory songURI) public {
         vm.assume(bytes(name).length > 0);
         vm.assume(bytes(symbol).length > 0);
         vm.assume(bytes(songURI).length > 0);
         CrateTokenV1 token2 = new CrateTokenV1();
-        token2.initialize(
-            uniswapRouter,
-            name,
-            symbol,
-            protocolFeeAddress,
-            artistAddress,
-            songURI
-        );
+        token2.initialize(uniswapRouter, name, symbol, protocolFeeAddress, artistAddress, songURI);
         assertEq(token2.name(), name);
         assertEq(token2.symbol(), symbol);
         assertEq(token2.totalSupply(), 100_000 * 1e18);

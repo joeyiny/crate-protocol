@@ -10,6 +10,7 @@ import "../lib/multicaller/src/LibMulticaller.sol";
 contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard {
     event TokenLaunched(address tokenAddress, string name, string symbol);
     event LaunchCostUpdated(uint256 newCost);
+
     address[] public allTokens;
 
     address immutable tokenImplementation;
@@ -22,43 +23,26 @@ contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard {
         tokenImplementation = address(new CrateTokenV1());
     }
 
-    function createToken(
-        string memory name,
-        string memory symbol,
-        string memory songURI,
-        bytes32 salt
-    ) public payable nonReentrant returns (address) {
+    function createToken(string memory name, string memory symbol, string memory songURI, bytes32 salt)
+        public
+        payable
+        nonReentrant
+        returns (address)
+    {
         address sender = LibMulticaller.sender();
 
         require(msg.value == launchCost, "Did not send correct launch cost.");
-        address clone = Clones.cloneDeterministic(
-            tokenImplementation,
-            _saltedSalt(sender, salt)
-        );
+        address clone = Clones.cloneDeterministic(tokenImplementation, _saltedSalt(sender, salt));
         CrateTokenV1 newToken = CrateTokenV1(clone);
         allTokens.push(address(newToken));
         emit TokenLaunched(address(newToken), name, symbol);
-        newToken.initialize(
-            uniswapV2Router02,
-            name,
-            symbol,
-            address(this),
-            sender,
-            songURI
-        );
+        newToken.initialize(uniswapV2Router02, name, symbol, address(this), sender, songURI);
 
         return address(newToken);
     }
 
-    function crateTokenAddress(
-        address owner,
-        bytes32 salt
-    ) public view returns (address addr, bool exists) {
-        addr = Clones.predictDeterministicAddress(
-            tokenImplementation,
-            _saltedSalt(owner, salt),
-            address(this)
-        );
+    function crateTokenAddress(address owner, bytes32 salt) public view returns (address addr, bool exists) {
+        addr = Clones.predictDeterministicAddress(tokenImplementation, _saltedSalt(owner, salt), address(this));
         exists = addr.code.length != 0;
     }
 
@@ -70,10 +54,7 @@ contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard {
      * @param salt  The salt, generated on the client side.
      * @return result The computed value.
      */
-    function _saltedSalt(
-        address owner,
-        bytes32 salt
-    ) internal view returns (bytes32 result) {
+    function _saltedSalt(address owner, bytes32 salt) internal view returns (bytes32 result) {
         assembly {
             mstore(0x20, owner)
             mstore(0x0c, chainid())
@@ -88,7 +69,7 @@ contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard {
     }
 
     function withdraw() public {
-        (bool sent, ) = owner().call{value: address(this).balance}("");
+        (bool sent,) = owner().call{value: address(this).balance}("");
         require(sent, "Failed to send Ether");
     }
 }

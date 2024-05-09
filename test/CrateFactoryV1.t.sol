@@ -23,22 +23,11 @@ contract CrateFactoryV1Test is DSTest {
         string memory symbol = "TTK";
         string memory songURI = "example.com";
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
-        address tokenAddress = address(
-            factory.createToken{value: 0.00125 ether}(
-                name,
-                symbol,
-                songURI,
-                salt
-            )
-        );
+        address tokenAddress = address(factory.createToken{value: 0.00125 ether}(name, symbol, songURI, salt));
 
         // Check if the token was created and if the event was emitted
         assertTrue(tokenAddress != address(0), "Token creation failed.");
-        assertEq(
-            factory.allTokens(0),
-            tokenAddress,
-            "Token address should be recorded in allTokens."
-        );
+        assertEq(factory.allTokens(0), tokenAddress, "Token address should be recorded in allTokens.");
 
         // Check token details (assuming public view functions in CrateTokenV1 for this)
         CrateTokenV1 token = CrateTokenV1(tokenAddress);
@@ -56,19 +45,8 @@ contract CrateFactoryV1Test is DSTest {
             string memory songURI = string(abi.encodePacked("example.com", i));
 
             bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
-            address tokenAddress = address(
-                factory.createToken{value: 0.00125 ether}(
-                    name,
-                    symbol,
-                    songURI,
-                    salt
-                )
-            );
-            assertEq(
-                factory.allTokens(i),
-                tokenAddress,
-                "Token address should be recorded in allTokens."
-            );
+            address tokenAddress = address(factory.createToken{value: 0.00125 ether}(name, symbol, songURI, salt));
+            assertEq(factory.allTokens(i), tokenAddress, "Token address should be recorded in allTokens.");
         }
     }
 
@@ -96,11 +74,7 @@ contract CrateFactoryV1Test is DSTest {
         // First, update the launch cost by the owner
         uint256 newLaunchCost = 0.5 ether; // Updated launch cost
         factory.updateLaunchCost(newLaunchCost);
-        assertEq(
-            factory.launchCost(),
-            newLaunchCost,
-            "Launch cost should be updated to new value."
-        );
+        assertEq(factory.launchCost(), newLaunchCost, "Launch cost should be updated to new value.");
 
         // Initial balance of the tester
         uint256 initialBalance = address(this).balance;
@@ -113,9 +87,7 @@ contract CrateFactoryV1Test is DSTest {
         string memory songURI = "example.com";
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
 
-        address tokenAddress = address(
-            factory.createToken{value: 0.5 ether}(name, symbol, songURI, salt)
-        );
+        address tokenAddress = address(factory.createToken{value: 0.5 ether}(name, symbol, songURI, salt));
 
         // Ensure the token is created
         assertTrue(tokenAddress != address(0), "Token creation failed.");
@@ -123,11 +95,7 @@ contract CrateFactoryV1Test is DSTest {
         // Ensure the excess ETH is refunded
         uint256 finalBalance = address(this).balance;
         uint256 expectedFinalBalance = initialBalance - factory.launchCost();
-        assertEq(
-            finalBalance,
-            expectedFinalBalance,
-            "Excess ETH was not refunded correctly."
-        );
+        assertEq(finalBalance, expectedFinalBalance, "Excess ETH was not refunded correctly.");
     }
 
     function testFailSameSalt() public {
@@ -137,25 +105,11 @@ contract CrateFactoryV1Test is DSTest {
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
 
         // First token creation should succeed
-        address firstClone = address(
-            factory.createToken{value: factory.launchCost()}(
-                name,
-                symbol,
-                songURI,
-                salt
-            )
-        );
+        address firstClone = address(factory.createToken{value: factory.launchCost()}(name, symbol, songURI, salt));
         assertTrue(firstClone != address(0), "First token creation failed");
 
         // Second token creation with the same salt should fail
-        address secondClone = address(
-            factory.createToken{value: factory.launchCost()}(
-                name,
-                symbol,
-                songURI,
-                salt
-            )
-        );
+        address secondClone = address(factory.createToken{value: factory.launchCost()}(name, symbol, songURI, salt));
     }
 
     receive() external payable {} // Allow this contract to receive ETH
