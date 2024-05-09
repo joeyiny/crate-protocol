@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
 import "ds-test/test.sol";
+import "forge-std/console.sol";
 import "../src/CrateFactoryV1.sol";
 
 contract CrateTokenV1Test is DSTest {
@@ -48,7 +49,7 @@ contract CrateTokenV1Test is DSTest {
         );
         assertEq(token2.name(), name);
         assertEq(token2.symbol(), symbol);
-        assertEq(token2.totalSupply(), 100_000 * 1e6);
+        assertEq(token2.totalSupply(), 100_000 * 1e18);
     }
 
     function testFuzz_BuyWithEth(uint256 ethAmount) public {
@@ -61,7 +62,7 @@ contract CrateTokenV1Test is DSTest {
     }
 
     function testFuzz_Buy(uint256 tokenAmount) public {
-        vm.assume(tokenAmount >= 1e6);
+        vm.assume(tokenAmount >= 1e18);
         vm.assume(tokenAmount <= 80000000000);
         vm.startPrank(bob);
         token.buy{value: 1000 ether}(tokenAmount);
@@ -79,16 +80,20 @@ contract CrateTokenV1Test is DSTest {
     }
 
     function testTokensInCurve() public {
-        assert(token.tokensInCurve() == 80_000 * 1e6);
+        assert(token.tokensInCurve() == 80_000 * 1e18);
         vm.startPrank(bob);
-        token.buy{value: 1 ether}(10 * 1e6);
+        token.buy{value: 1 ether}(10 * 1e18);
         vm.stopPrank();
-        assert(token.tokensInCurve() == 79_990 * 1e6);
+        assert(token.tokensInCurve() == 79_990 * 1e18);
     }
 
     function testEndBondingCurveAndAddLiquidity() public {
         vm.startPrank(bob);
-        token.buy{value: 8 ether}(80_000 * 1e6); // Buy out the curve
+        console.log("Below is from test file");
+        console.log(80_000 * 1e18);
+        console.log("Above is from test file");
+
+        token.buy{value: 8 ether}(80_000 * 1e18); // Buy out the curve
         vm.stopPrank();
         assertTrue(!token.bondingCurveActive());
         assertEq(address(token).balance, 0);

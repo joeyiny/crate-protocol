@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import "lib/openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "../lib/multicaller/src/LibMulticaller.sol";
+import "forge-std/console.sol";
 
 // The total supply is 100,000 tokens
 // Once the bonding curve has sold out 80,000 tokens, the other 20,000 are put in Uniswap with the total ETH in the contract.
@@ -28,8 +29,8 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
 
     uint256 public constant SLIPPAGE_TOLERANCE = 250; // Slippage tolerance (500 basis points = 5%)
 
-    uint256 private constant MAX_SUPPLY = 100_000 * 1e6;
-    uint256 private constant MAX_CURVE_SUPPLY = 80_000 * 1e6;
+    uint256 private constant MAX_SUPPLY = 100_000 * 1e18;
+    uint256 private constant MAX_CURVE_SUPPLY = 80_000 * 1e18;
 
     uint256 private constant CRATE_FEE_PERCENT = 25000000000000000;
     uint256 private constant ARTIST_FEE_PERCENT = 25000000000000000;
@@ -80,10 +81,6 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         buy(tokensToBuy);
     }
 
-    function decimals() public pure override returns (uint8) {
-        return 6;
-    }
-
     function buy(uint256 _amount) public payable nonReentrant {
         address sender = LibMulticaller.sender();
 
@@ -96,11 +93,15 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
             _amount >= 10 ** decimals(),
             "Cannot buy less than 1 token from the bonding curve."
         );
+        console.log(_amount);
+        console.log(getBuyPrice(_amount));
+
         uint256 price = getBuyPrice(_amount);
         uint256 crateFee = (price * CRATE_FEE_PERCENT) / 1 ether;
         uint256 artistFee = (price * ARTIST_FEE_PERCENT) / 1 ether;
         uint256 totalPayment = price + crateFee + artistFee;
-
+        console.log(msg.value);
+        console.log(totalPayment);
         require(
             msg.value >= totalPayment,
             "Not enough Ether to complete purchase."
@@ -214,7 +215,9 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
 
     // Takes in the amount of tokens, returns cost of all tokens up to that point.
     function bondingCurve(uint256 x) public pure returns (uint256) {
-        return (x * (x + 1) * (2 * x + 1)) / 256000000000000;
+        return
+            (x * (x + 1) * (2 * x + 1)) /
+            256000000000000000000000000000000000000000000000000;
     }
 
     function tokensInCurve() public view returns (uint256) {
