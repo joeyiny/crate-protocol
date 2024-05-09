@@ -30,7 +30,7 @@ contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard {
     ) public payable nonReentrant returns (address) {
         address sender = LibMulticaller.sender();
 
-        require(msg.value >= launchCost, "Insufficient ETH sent.");
+        require(msg.value == launchCost, "Did not send correct launch cost.");
         address clone = Clones.cloneDeterministic(
             tokenImplementation,
             _saltedSalt(sender, salt)
