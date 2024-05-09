@@ -28,12 +28,16 @@ contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard {
         string memory songURI,
         bytes32 salt
     ) public payable nonReentrant returns (address) {
+        address sender = LibMulticaller.sender();
+
         require(msg.value >= launchCost, "Insufficient ETH sent.");
-        address clone = Clones.cloneDeterministic(tokenImplementation, salt);
+        address clone = Clones.cloneDeterministic(
+            tokenImplementation,
+            _saltedSalt(sender, salt)
+        );
         CrateTokenV1 newToken = CrateTokenV1(clone);
         allTokens.push(address(newToken));
         emit TokenLaunched(address(newToken), name, symbol);
-        address sender = LibMulticaller.sender();
         newToken.initialize(
             uniswapV2Router02,
             name,
@@ -49,8 +53,32 @@ contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard {
     function crateTokenAddress(
         bytes32 salt
     ) public view returns (address addr, bool exists) {
-        addr = Clones.predictDeterministicAddress(tokenImplementation, salt);
+        addr = Clones.predictDeterministicAddress(
+            implementation,
+            _saltedSalt(owner, salt),
+            address(this)
+        );
         exists = addr.code.length != 0;
+    }
+
+    /**
+     * @dev Returns the salted salt.
+     *      To prevent griefing and accidental collisions from clients that don't
+     *      generate their salt properly.
+     * @param owner The initial owner of the SoundEdition.
+     * @param salt  The salt, generated on the client side.
+     * @return result The computed value.
+     */
+    function _saltedSalt(
+        address owner,
+        bytes32 salt
+    ) internal view returns (bytes32 result) {
+        assembly {
+            mstore(0x20, owner)
+            mstore(0x0c, chainid())
+            mstore(0x00, salt)
+            result := keccak256(0x00, 0x40)
+        }
     }
 
     function updateLaunchCost(uint256 newCost) public onlyOwner {
