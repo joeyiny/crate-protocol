@@ -5,6 +5,7 @@ import "./CrateTokenV1.sol";
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "../lib/multicaller/src/LibMulticaller.sol";
 
 contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard {
     event TokenLaunched(address tokenAddress, string name, string symbol);
@@ -27,17 +28,18 @@ contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard {
         string memory songURI,
         bytes32 salt
     ) public payable nonReentrant returns (address) {
-        require(msg.value == launchCost, "Insufficient ETH sent.");
+        require(msg.value >= launchCost, "Insufficient ETH sent.");
         address clone = Clones.cloneDeterministic(tokenImplementation, salt);
         CrateTokenV1 newToken = CrateTokenV1(clone);
         allTokens.push(address(newToken));
         emit TokenLaunched(address(newToken), name, symbol);
+        address sender = LibMulticaller.sender();
         newToken.initialize(
             uniswapV2Router02,
             name,
             symbol,
             address(this),
-            msg.sender,
+            sender,
             songURI
         );
 

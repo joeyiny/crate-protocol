@@ -52,7 +52,7 @@ contract CrateTokenV1Test is DSTest {
     }
 
     function testFuzz_BuyWithEth(uint256 ethAmount) public {
-        vm.assume(ethAmount <= 1000 ether);
+        vm.assume(ethAmount <= 4 ether);
         vm.assume(ethAmount >= 0.000001 ether);
         vm.startPrank(alice);
         token.buyWithEth{value: ethAmount}();

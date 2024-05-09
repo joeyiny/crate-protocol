@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import "lib/openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "../lib/multicaller/src/LibMulticaller.sol";
 
 // The total supply is 100,000 tokens
 // Once the bonding curve has sold out 80,000 tokens, the other 20,000 are put in Uniswap with the total ETH in the contract.
@@ -66,10 +67,6 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         _approve(address(this), uniswapV2Router02, MAX_SUPPLY);
     }
 
-    function decimals() public pure override returns (uint8) {
-        return 6;
-    }
-
     function buyWithEth() external payable {
         // Take fees out of ETH, then see how many tokens you can buy with the remaining amount.
         uint256 cratePreFee = (msg.value * CRATE_FEE_PERCENT) / 1 ether;
@@ -83,7 +80,13 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         buy(tokensToBuy);
     }
 
+    function decimals() public pure override returns (uint8) {
+        return 6;
+    }
+
     function buy(uint256 _amount) public payable nonReentrant {
+        address sender = LibMulticaller.sender();
+
         require(bondingCurveActive, "Bonding curve ended");
         require(
             _amount <= tokensInCurve(),
@@ -97,6 +100,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         uint256 crateFee = (price * CRATE_FEE_PERCENT) / 1 ether;
         uint256 artistFee = (price * ARTIST_FEE_PERCENT) / 1 ether;
         uint256 totalPayment = price + crateFee + artistFee;
+
         require(
             msg.value >= totalPayment,
             "Not enough Ether to complete purchase."
@@ -109,12 +113,12 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
             "Slippage tolerance exceeded."
         );
 
-        _transfer(address(this), msg.sender, _amount);
+        _transfer(address(this), sender, _amount);
         if (tokensInCurve() == 0) {
             bondingCurveActive = false;
             emit BondingCurveEnded();
         }
-        emit TokenTrade(msg.sender, _amount, true, totalPayment);
+        emit TokenTrade(sender, _amount, true, totalPayment);
 
         (bool crateFeePaid, ) = protocolFeeDestination.call{value: crateFee}(
             ""
@@ -127,9 +131,9 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         require(artistFeePaid, "Failed to pay artist fee");
 
         // Refund the remaining Ether to the buyer
-        (bool refundSuccess, ) = msg.sender.call{
-            value: msg.value - totalPayment
-        }("");
+        (bool refundSuccess, ) = sender.call{value: msg.value - totalPayment}(
+            ""
+        );
         require(refundSuccess, "Refund failed");
 
         if (!bondingCurveActive) {
@@ -138,8 +142,10 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
     }
 
     function sell(uint256 _amount) external nonReentrant {
+        address sender = LibMulticaller.sender();
+
         require(bondingCurveActive, "Bonding curve ended");
-        require(balanceOf(msg.sender) >= _amount, "Not enough tokens to sell");
+        require(balanceOf(sender) >= _amount, "Not enough tokens to sell");
         uint256 price = getSellPrice(_amount);
         uint256 crateFee = (price * CRATE_FEE_PERCENT) / 1 ether;
         uint256 artistFee = (price * ARTIST_FEE_PERCENT) / 1 ether;
@@ -155,12 +161,10 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
             "Slippage tolerance exceeded."
         );
 
-        _transfer(msg.sender, address(this), _amount);
-        emit TokenTrade(msg.sender, _amount, false, netSellerProceeds);
+        _transfer(sender, address(this), _amount);
+        emit TokenTrade(sender, _amount, false, netSellerProceeds);
 
-        (bool netProceedsSent, ) = msg.sender.call{value: netSellerProceeds}(
-            ""
-        );
+        (bool netProceedsSent, ) = sender.call{value: netSellerProceeds}("");
         require(netProceedsSent, "Failed to send net seller proceeds");
 
         (bool crateFeePaid, ) = protocolFeeDestination.call{value: crateFee}(
