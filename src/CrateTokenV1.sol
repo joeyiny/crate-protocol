@@ -45,6 +45,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         artistFeeDestination = _artistAddress;
         protocolFeeDestination = _protocolAddress;
         uniswapV2Router02 = _uniswapV2Router02;
+        bondingCurveActive = true;
         songURI = _songURI;
         _approve(address(this), uniswapV2Router02, MAX_SUPPLY);
     }
