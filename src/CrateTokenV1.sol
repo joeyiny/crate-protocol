@@ -188,6 +188,8 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
     }
 
     function withdrawArtistFees() public {
+        address sender = LibMulticaller.sender();
+        require(sender == artistFeeDestination, "Unauthorized");
         require(artistFees > 0, "No fees to withdraw");
         uint256 fees = artistFees;
         artistFees = 0;
