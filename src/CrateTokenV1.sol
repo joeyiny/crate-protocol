@@ -37,6 +37,10 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
     event BondingCurveEnded();
     event ArtistFeesWithdrawn(address artist, uint256 amount);
 
+    constructor() {
+        _disableInitializers();
+    }
+
     function initialize(
         address _uniswapV2Router02,
         string memory _name,
