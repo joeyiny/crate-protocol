@@ -72,4 +72,6 @@ contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard {
         (bool sent,) = owner().call{value: address(this).balance}("");
         require(sent, "Failed to send Ether");
     }
+
+    receive() external payable {}
 }
