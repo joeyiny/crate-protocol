@@ -68,7 +68,11 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
 
         require(bondingCurveActive, "Bonding curve ended");
         require(_amount <= tokensInCurve(), "Not enough tokens in the bonding curve.");
-        require(_amount >= 10 ** decimals(), "Cannot buy less than 1 token from the bonding curve.");
+        if (tokensInCurve() >= 10 ** decimals()) {
+            require(_amount >= 10 ** decimals(), "Cannot buy less than 1 token from the bonding curve.");
+        } else {
+            _amount = tokensInCurve();
+        }
 
         uint256 price = getBuyPrice(_amount);
         uint256 crateFee = (price * CRATE_FEE_PERCENT) / 1 ether;
