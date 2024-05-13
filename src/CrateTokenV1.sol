@@ -57,7 +57,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         _approve(address(this), uniswapV2Router02, MAX_SUPPLY);
     }
 
-    function buyWithEth() external payable {
+    function buyWithEth(uint256 minTokensReceivable) external payable {
         // Take fees out of ETH, then see how many tokens you can buy with the remaining amount.
         uint256 preFee =
             (msg.value * (CRATE_FEE_PERCENT + ARTIST_FEE_PERCENT)) / (CRATE_FEE_PERCENT + ARTIST_FEE_PERCENT + 1 ether);
@@ -65,6 +65,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         uint256 tokensToBuy = estimateMaxPurchase(netValue);
 
         require(tokensToBuy > 0, "Not enough ETH provided to buy tokens.");
+        require(tokensToBuy >= minTokensReceivable, "Slippage tolerance exceeded.");
 
         //If you sent enough eth, then buy tokens.
         buy(tokensToBuy);
@@ -114,7 +115,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         }
     }
 
-    function sell(uint256 _amount) external nonReentrant {
+    function sell(uint256 _amount, uint256 minEtherReceivable) external nonReentrant {
         address sender = LibMulticaller.sender();
 
         require(bondingCurveActive, "Bonding curve ended");
@@ -126,11 +127,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         uint256 netSellerProceeds = price - crateFee - artistFee;
         artistFees += artistFee;
 
-        // Calculate the minimum Ether that should be received based on the slippage tolerance
-        uint256 minEther = netSellerProceeds - ((netSellerProceeds * SLIPPAGE_TOLERANCE) / 10_000);
-
-        // Ensure the seller receives at least the minimum Ether after considering slippage
-        require(address(this).balance - artistFees >= minEther, "Slippage tolerance exceeded.");
+        require(netSellerProceeds >= minEtherReceivable, "Slippage tolerance exceeded.");
 
         tokensInCurve += _amount;
         _transfer(sender, address(this), _amount);
