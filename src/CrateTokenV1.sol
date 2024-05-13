@@ -28,9 +28,12 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
 
     string public songURI;
 
+    uint256 public artistFees;
+
     event TokenTrade(address trader, uint256 tokenAmount, bool isPurchase, uint256 ethAmount);
 
     event BondingCurveEnded();
+    event ArtistFeesWithdrawn(address artist, uint256 amount);
 
     function initialize(
         address _uniswapV2Router02,
@@ -95,8 +98,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         (bool crateFeePaid,) = protocolFeeDestination.call{value: crateFee}("");
         require(crateFeePaid, "Failed to pay crate fee");
 
-        (bool artistFeePaid,) = artistFeeDestination.call{value: artistFee}("");
-        require(artistFeePaid, "Failed to pay artist fee");
+        artistFees += artistFee;
 
         // Refund the remaining Ether to the buyer
         (bool refundSuccess,) = sender.call{value: msg.value - totalPayment}("");
@@ -122,7 +124,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         uint256 minEther = netSellerProceeds - ((netSellerProceeds * SLIPPAGE_TOLERANCE) / 10_000);
 
         // Ensure the seller receives at least the minimum Ether after considering slippage
-        require(address(this).balance >= minEther, "Slippage tolerance exceeded.");
+        require(address(this).balance - artistFees >= minEther, "Slippage tolerance exceeded.");
 
         _transfer(sender, address(this), _amount);
         emit TokenTrade(sender, _amount, false, netSellerProceeds);
@@ -133,8 +135,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         (bool crateFeePaid,) = protocolFeeDestination.call{value: crateFee}("");
         require(crateFeePaid, "Failed to pay crate fee");
 
-        (bool artistFeePaid,) = artistFeeDestination.call{value: artistFee}("");
-        require(artistFeePaid, "Failed to pay artist fee");
+        artistFees += artistFee;
     }
 
     function estimateMaxPurchase(uint256 ethAmount) public view returns (uint256) {
@@ -177,7 +178,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
     function _addLiquidity() internal {
         require(!bondingCurveActive, "The bonding curve is still active.");
         (uint256 amountToken, uint256 amountETH, uint256 liquidity) = IUniswapV2Router02(uniswapV2Router02)
-            .addLiquidityETH{value: address(this).balance}(
+            .addLiquidityETH{value: address(this).balance - artistFees}(
             address(this),
             balanceOf(address(this)), // amountTokenDesired
             0, // amountTokenMin (set to 0 for simplicity)
@@ -186,5 +187,13 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
             block.timestamp + 300 // Deadline (current time plus 300 seconds)
         );
         require(amountToken > 0 && amountETH > 0 && liquidity > 0, "Liquidity addition failed.");
+    }
+
+    function withdrawArtistFees() public {
+        require(artistFees > 0, "No fees to withdraw");
+        uint256 fees = artistFees;
+        artistFees = 0;
+        payable(artistFeeDestination).transfer(fees);
+        emit ArtistFeesWithdrawn(artistFeeDestination, fees);
     }
 }
