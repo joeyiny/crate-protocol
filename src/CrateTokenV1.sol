@@ -133,8 +133,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         (bool crateFeePaid,) = protocolFeeDestination.call{value: crateFee}("");
         require(crateFeePaid, "Failed to pay crate fee");
 
-        (bool artistFeePaid,) = artistFeeDestination.call{value: artistFee}("");
-        require(artistFeePaid, "Failed to pay artist fee");
+        artistFeeDestination.transfer(artistFee);
     }
 
     function estimateMaxPurchase(uint256 ethAmount) public view returns (uint256) {
