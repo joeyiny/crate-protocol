@@ -55,9 +55,9 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
 
     function buyWithEth() external payable {
         // Take fees out of ETH, then see how many tokens you can buy with the remaining amount.
-        uint256 cratePreFee = (msg.value * CRATE_FEE_PERCENT) / 1 ether;
-        uint256 artistPreFee = (msg.value * ARTIST_FEE_PERCENT) / 1 ether;
-        uint256 netValue = msg.value - cratePreFee - artistPreFee;
+        uint256 preFee =
+            (msg.value * (CRATE_FEE_PERCENT + ARTIST_FEE_PERCENT)) / (CRATE_FEE_PERCENT + ARTIST_FEE_PERCENT + 1 ether);
+        uint256 netValue = msg.value - preFee;
         uint256 tokensToBuy = estimateMaxPurchase(netValue);
 
         require(tokensToBuy > 0, "Not enough ETH provided to buy tokens.");
