@@ -81,6 +81,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         uint256 crateFee = (price * CRATE_FEE_PERCENT) / 1 ether;
         uint256 artistFee = (price * ARTIST_FEE_PERCENT) / 1 ether;
         uint256 totalPayment = price + crateFee + artistFee;
+        artistFees += artistFee;
 
         require(msg.value >= totalPayment, "Not enough Ether to complete purchase.");
         // Calculate the minimum amount of tokens that should be received based on the slippage tolerance
@@ -97,8 +98,6 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
 
         (bool crateFeePaid,) = protocolFeeDestination.call{value: crateFee}("");
         require(crateFeePaid, "Failed to pay crate fee");
-
-        artistFees += artistFee;
 
         // Refund the remaining Ether to the buyer
         (bool refundSuccess,) = sender.call{value: msg.value - totalPayment}("");
@@ -119,6 +118,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         uint256 crateFee = (price * CRATE_FEE_PERCENT) / 1 ether;
         uint256 artistFee = (price * ARTIST_FEE_PERCENT) / 1 ether;
         uint256 netSellerProceeds = price - crateFee - artistFee;
+        artistFees += artistFee;
 
         // Calculate the minimum Ether that should be received based on the slippage tolerance
         uint256 minEther = netSellerProceeds - ((netSellerProceeds * SLIPPAGE_TOLERANCE) / 10_000);
@@ -134,8 +134,6 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
 
         (bool crateFeePaid,) = protocolFeeDestination.call{value: crateFee}("");
         require(crateFeePaid, "Failed to pay crate fee");
-
-        artistFees += artistFee;
     }
 
     function estimateMaxPurchase(uint256 ethAmount) public view returns (uint256) {
