@@ -46,14 +46,6 @@ contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard {
         exists = addr.code.length != 0;
     }
 
-    /**
-     * @dev Returns the salted salt.
-     *      To prevent griefing and accidental collisions from clients that don't
-     *      generate their salt properly.
-     * @param owner The initial owner of the SoundEdition.
-     * @param salt  The salt, generated on the client side.
-     * @return result The computed value.
-     */
     function _saltedSalt(address owner, bytes32 salt) internal view returns (bytes32 result) {
         assembly {
             mstore(0x20, owner)
