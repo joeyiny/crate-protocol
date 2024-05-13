@@ -71,6 +71,9 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         require(tokensToBuy > 0, "Not enough ETH provided to buy tokens.");
         require(tokensToBuy >= minTokensReceivable, "Slippage tolerance exceeded.");
 
+        require(bondingCurveActive, "Bonding curve ended");
+        require(tokensInCurve > 0, "Bonding curve is sold out");
+
         //If you sent enough eth, then buy tokens.
         buy(tokensToBuy);
     }
