@@ -197,7 +197,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         require(artistFees > 0, "No fees to withdraw");
         uint256 fees = artistFees;
         artistFees = 0;
-        (bool artistFeePaid,) = artistFeeDestination.call{value: fees}("");
+        (bool artistFeePaid,) = artistFeeDestination.call{value: fees, gas: 2300}("");
         require(artistFeePaid, "Failed to pay artist fee");
         emit ArtistFeesWithdrawn(artistFeeDestination, fees);
     }
