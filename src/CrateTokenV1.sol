@@ -18,6 +18,8 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
     uint256 private constant MAX_SUPPLY = 100_000 * 1e18;
     uint256 private constant MAX_CURVE_SUPPLY = 80_000 * 1e18;
 
+    uint256 public tokensInCurve;
+
     uint256 private constant CRATE_FEE_PERCENT = 25000000000000000;
     uint256 private constant ARTIST_FEE_PERCENT = 25000000000000000;
 
@@ -49,6 +51,8 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         protocolFeeDestination = _protocolAddress;
         uniswapV2Router02 = _uniswapV2Router02;
         bondingCurveActive = true;
+
+        tokensInCurve = MAX_CURVE_SUPPLY;
         songURI = _songURI;
         _approve(address(this), uniswapV2Router02, MAX_SUPPLY);
     }
@@ -70,11 +74,11 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         address sender = LibMulticaller.sender();
 
         require(bondingCurveActive, "Bonding curve ended");
-        require(_amount <= tokensInCurve(), "Not enough tokens in the bonding curve.");
-        if (tokensInCurve() >= 10 ** decimals()) {
+        require(_amount <= tokensInCurve, "Not enough tokens in the bonding curve.");
+        if (tokensInCurve >= 10 ** decimals()) {
             require(_amount >= 10 ** decimals(), "Cannot buy less than 1 token from the bonding curve.");
         } else {
-            _amount = tokensInCurve();
+            _amount = tokensInCurve;
         }
 
         uint256 price = getBuyPrice(_amount);
@@ -89,8 +93,10 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
 
         require(balanceOf(address(this)) >= minTokens, "Slippage tolerance exceeded.");
 
+        tokensInCurve -= _amount;
         _transfer(address(this), sender, _amount);
-        if (tokensInCurve() == 0) {
+
+        if (tokensInCurve == 0) {
             bondingCurveActive = false;
             emit BondingCurveEnded();
         }
@@ -126,7 +132,9 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         // Ensure the seller receives at least the minimum Ether after considering slippage
         require(address(this).balance - artistFees >= minEther, "Slippage tolerance exceeded.");
 
+        tokensInCurve += _amount;
         _transfer(sender, address(this), _amount);
+
         emit TokenTrade(sender, _amount, false, netSellerProceeds);
 
         (bool netProceedsSent,) = sender.call{value: netSellerProceeds}("");
@@ -137,7 +145,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
     }
 
     function estimateMaxPurchase(uint256 ethAmount) public view returns (uint256) {
-        uint256 remainingSupply = tokensInCurve();
+        uint256 remainingSupply = tokensInCurve;
         uint256 lower = 0;
         uint256 upper = remainingSupply;
         while (lower < upper) {
@@ -152,11 +160,11 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
     }
 
     function getBuyPrice(uint256 amount) public view returns (uint256) {
-        return getPrice(MAX_CURVE_SUPPLY - tokensInCurve(), amount);
+        return getPrice(MAX_CURVE_SUPPLY - tokensInCurve, amount);
     }
 
     function getSellPrice(uint256 amount) public view returns (uint256) {
-        return getPrice(MAX_CURVE_SUPPLY - tokensInCurve() - amount, amount);
+        return getPrice(MAX_CURVE_SUPPLY - tokensInCurve - amount, amount);
     }
 
     function getPrice(uint256 supply, uint256 amount) private pure returns (uint256) {
@@ -167,10 +175,6 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
     function bondingCurve(uint256 x) public pure returns (uint256) {
         return (x * (x + 1) * (2 * x + 1)) / 256000000000000000000000000000000000000000000000000;
         // Double check this math. The bonding curve should sell out at ~4.0000 ETH
-    }
-
-    function tokensInCurve() public view returns (uint256) {
-        return balanceOf(address(this)) - (MAX_SUPPLY - MAX_CURVE_SUPPLY);
     }
 
     function _addLiquidity() internal {
