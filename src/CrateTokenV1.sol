@@ -148,14 +148,6 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         require(crateFeePaid, "Failed to pay crate fee");
     }
 
-    function transfer(address to, uint256 value) public virtual override returns (bool) {
-        if (bondingCurveActive) {
-            revert("Can't transfer tokens during bonding curve.");
-        } else {
-            return super.transfer(to, value);
-        }
-    }
-
     function estimateMaxPurchase(uint256 ethAmount) public view returns (uint256) {
         uint256 remainingSupply = tokensInCurve;
         uint256 lower = 0;
@@ -213,6 +205,14 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         );
         require(amountToken > 0 && amountETH > 0 && liquidity > 0, "Liquidity addition failed.");
         emit LiquidityAdded(amountToken, amountETH, liquidity);
+    }
+
+    function _update(address from, address to, uint256 value) internal override {
+        // only allow transfers to/fro token contract during bonding curve phase
+        if (from != address(this) && to != address(this)) {
+            require(!bondingCurveActive, "bonding curve active");
+        }
+        super._update(from, to, value);
     }
 
     function withdrawArtistFees() public {
