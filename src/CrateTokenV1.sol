@@ -33,9 +33,9 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
     uint256 public artistFees;
 
     event TokenTrade(address trader, uint256 tokenAmount, bool isPurchase, uint256 ethAmount);
-
     event BondingCurveEnded();
     event ArtistFeesWithdrawn(address artist, uint256 amount);
+    event LiquidityAdded(uint256 amountToken, uint256 amountETH, uint256 liquidity);
 
     constructor() {
         _disableInitializers();
@@ -183,16 +183,28 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
 
     function _addLiquidity() internal {
         require(!bondingCurveActive, "The bonding curve is still active.");
+        uint256 amountTokenDesired = balanceOf(address(this));
+        uint256 amountETHDesired = address(this).balance - artistFees;
+
+        // Ensure we have some tokens and ETH to add to the pool
+        require(amountTokenDesired > 0 && amountETHDesired > 0, "Insufficient tokens or ETH for liquidity.");
+
+        // Calculate the minimum amounts based on a fair price to prevent front-running
+        uint256 minTokenPrice = getPrice(MAX_CURVE_SUPPLY, 1e18); // Fair market price for 1 token
+        uint256 minTokens = (amountETHDesired * 1e18) / minTokenPrice; // Minimum tokens based on fair price
+        uint256 minETH = (amountTokenDesired * minTokenPrice) / 1e18; // Minimum ETH based on fair price
+
         (uint256 amountToken, uint256 amountETH, uint256 liquidity) = IUniswapV2Router02(uniswapV2Router02)
             .addLiquidityETH{value: address(this).balance - artistFees}(
             address(this),
-            balanceOf(address(this)), // amountTokenDesired
-            0, // amountTokenMin (set to 0 for simplicity)
-            0, // amountETHMin (set to 0 for simplicity)
+            amountTokenDesired, // amountTokenDesired
+            minTokens, // amountTokenMin
+            minETH, // amountETHMin
             address(0), //where to send LP tokens
             block.timestamp + 300 // Deadline (current time plus 300 seconds)
         );
         require(amountToken > 0 && amountETH > 0 && liquidity > 0, "Liquidity addition failed.");
+        emit LiquidityAdded(amountToken, amountETH, liquidity);
     }
 
     function withdrawArtistFees() public {
