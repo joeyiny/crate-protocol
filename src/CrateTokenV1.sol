@@ -148,6 +148,14 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         require(crateFeePaid, "Failed to pay crate fee");
     }
 
+    function transfer(address to, uint256 value) public virtual override returns (bool) {
+        if (bondingCurveActive) {
+            revert("Can't transfer tokens during bonding curve.");
+        } else {
+            return super.transfer(to, value);
+        }
+    }
+
     function estimateMaxPurchase(uint256 ethAmount) public view returns (uint256) {
         uint256 remainingSupply = tokensInCurve;
         uint256 lower = 0;
