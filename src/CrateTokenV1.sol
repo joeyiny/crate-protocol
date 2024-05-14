@@ -15,7 +15,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
 
     uint256 public constant SLIPPAGE_TOLERANCE = 250; // Slippage tolerance (500 basis points = 5%)
 
-    uint256 private constant MAX_SUPPLY = 100_000 * 1e18;
+    uint256 private constant MAX_SUPPLY = 106_500 * 1e18;
     uint256 private constant MAX_CURVE_SUPPLY = 80_000 * 1e18;
 
     uint256 public tokensInCurve;
