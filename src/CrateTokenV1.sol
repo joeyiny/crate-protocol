@@ -192,14 +192,13 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         // Calculate the minimum amounts based on a fair price to prevent front-running
         uint256 minTokenPrice = getPrice(MAX_CURVE_SUPPLY, 1e18); // Fair market price for 1 token
         uint256 minTokens = (amountETHDesired * 1e18) / minTokenPrice; // Minimum tokens based on fair price
-        uint256 minETH = (amountTokenDesired * minTokenPrice) / 1e18; // Minimum ETH based on fair price
 
         (uint256 amountToken, uint256 amountETH, uint256 liquidity) = IUniswapV2Router02(uniswapV2Router02)
             .addLiquidityETH{value: address(this).balance - artistFees}(
             address(this),
             amountTokenDesired, // amountTokenDesired
             minTokens, // amountTokenMin
-            minETH, // amountETHMin
+            amountETHDesired, // amountETHMin
             address(0), //where to send LP tokens
             block.timestamp + 300 // Deadline (current time plus 300 seconds)
         );
