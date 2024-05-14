@@ -63,6 +63,9 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
 
     function buyWithEth(uint256 minTokensReceivable) external payable {
         // Take fees out of ETH, then see how many tokens you can buy with the remaining amount.
+        require(bondingCurveActive, "Bonding curve ended");
+        require(tokensInCurve > 0, "Bonding curve is sold out");
+
         uint256 preFee =
             (msg.value * (CRATE_FEE_PERCENT + ARTIST_FEE_PERCENT)) / (CRATE_FEE_PERCENT + ARTIST_FEE_PERCENT + 1 ether);
         uint256 netValue = msg.value - preFee;
@@ -70,9 +73,6 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
 
         require(tokensToBuy > 0, "Not enough ETH provided to buy tokens.");
         require(tokensToBuy >= minTokensReceivable, "Slippage tolerance exceeded.");
-
-        require(bondingCurveActive, "Bonding curve ended");
-        require(tokensInCurve > 0, "Bonding curve is sold out");
 
         //If you sent enough eth, then buy tokens.
         buy(tokensToBuy);
