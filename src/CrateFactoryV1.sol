@@ -23,6 +23,10 @@ contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard {
         tokenImplementation = address(new CrateTokenV1());
     }
 
+    function changeTokenImplementation(address _newTokenImplementation) public onlyOwner {
+        tokenImplementation = _newTokenImplementation;
+    }
+
     function createToken(string memory name, string memory symbol, string memory songURI, bytes32 salt)
         public
         payable
