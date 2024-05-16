@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "../lib/multicaller/src/LibMulticaller.sol";
 import {IUniswapV2Router02} from "../src/interfaces/IUniswapV2RouterV2.sol";
 
-// The total supply is 100,000 tokens
+// The total supply is 106,500 tokens
 // Once the bonding curve has sold out 80,000 tokens, the other 20,000 are put in Uniswap with the total ETH in the contract.
 // The LP tokens are then burned, so no one can pull the liquidity.
 
