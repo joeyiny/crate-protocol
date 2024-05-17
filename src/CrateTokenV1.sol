@@ -7,7 +7,7 @@ import "../lib/multicaller/src/LibMulticaller.sol";
 import {IUniswapV2Router02} from "../src/interfaces/IUniswapV2RouterV2.sol";
 
 // The total supply is 106,500 tokens
-// Once the bonding curve has sold out 80,000 tokens, the other 20,000 are put in Uniswap with the total ETH in the contract.
+// Once the bonding curve has sold out 80,000 tokens, the other 26,500 are put in Uniswap with the total ETH in the contract.
 // The LP tokens are then burned, so no one can pull the liquidity.
 
 contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
@@ -20,8 +20,8 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
 
     uint256 public tokensInCurve;
 
-    uint256 private constant CRATE_FEE_PERCENT = 25000000000000000;
-    uint256 private constant ARTIST_FEE_PERCENT = 25000000000000000;
+    uint256 private constant CRATE_FEE_PERCENT = 5000000000000000;
+    uint256 private constant ARTIST_FEE_PERCENT = 5000000000000000;
 
     bool public bondingCurveActive = true;
 
