@@ -177,8 +177,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
 
     // Takes in the amount of tokens, returns cost of all tokens up to that point.
     function bondingCurve(uint256 x) public pure returns (uint256) {
-        return (x * (x + 1) * (2 * x + 1)) / 256000000000000000000000000000000000000000000000000;
-        // Double check this math. The bonding curve should sell out at ~4.0000 ETH
+        return (x * (x / 1e10 + 1)) / 16e16;
     }
 
     function _addLiquidity() internal {
