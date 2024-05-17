@@ -183,7 +183,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
     function _addLiquidity() internal {
         require(!bondingCurveActive, "The bonding curve is still active.");
         uint256 amountTokenDesired = balanceOf(address(this));
-        uint256 amountETHDesired = address(this).balance - artistFees;
+        uint256 amountETHDesired = address(this).balance - artistFees - 0.3 ether;
 
         // Ensure we have some tokens and ETH to add to the pool
         require(amountTokenDesired > 0 && amountETHDesired > 0, "Insufficient tokens or ETH for liquidity.");
@@ -202,6 +202,9 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
             block.timestamp + 300 // Deadline (current time plus 300 seconds)
         );
         require(amountToken > 0 && amountETH > 0 && liquidity > 0, "Liquidity addition failed.");
+        (bool protocolFeePaid,) = protocolFeeDestination.call{value: 0.3 ether}("");
+        require(protocolFeePaid, "Failed to pay protocol fee");
+
         emit LiquidityAdded(amountToken, amountETH, liquidity);
     }
 
