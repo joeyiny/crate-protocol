@@ -6,8 +6,8 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "../lib/multicaller/src/LibMulticaller.sol";
 import {IUniswapV2Router02} from "../src/interfaces/IUniswapV2RouterV2.sol";
 
-// The total supply is 106,500 tokens
-// Once the bonding curve has sold out 80,000 tokens, the other 26,500 are put in Uniswap with the total ETH in the contract.
+// The total supply is 117,000 tokens
+// Once the bonding curve has sold out 80,000 tokens, the other 37,000 are put in Uniswap with the total ETH in the contract.
 // The LP tokens are then burned, so no one can pull the liquidity.
 
 contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
@@ -193,7 +193,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard {
         uint256 minTokens = (amountETHDesired * 1e18) / minTokenPrice; // Minimum tokens based on fair price
 
         (uint256 amountToken, uint256 amountETH, uint256 liquidity) = IUniswapV2Router02(uniswapV2Router02)
-            .addLiquidityETH{value: address(this).balance - artistFees}(
+            .addLiquidityETH{value: address(this).balance - artistFees - 0.3 ether}(
             address(this),
             amountTokenDesired, // amountTokenDesired
             minTokens, // amountTokenMin
