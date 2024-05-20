@@ -65,26 +65,5 @@ contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard {
         require(sent, "Failed to send Ether");
     }
 
-    function getTokenBatch(uint256 startIndex, uint256 endIndex) public view returns (address[] memory) {
-        // Ensure valid range
-        require(startIndex < allTokens.length, "Invalid startIndex");
-        require(endIndex > startIndex, "endIndex must be greater than startIndex");
-
-        // Adjust endIndex if it exceeds the length of allTokens
-        if (endIndex > allTokens.length) {
-            endIndex = allTokens.length;
-        }
-
-        // Create a temporary array to hold the batch results
-        address[] memory batch = new address[endIndex - startIndex];
-
-        // Copy the relevant entries from 'allTokens' to 'batch'
-        for (uint256 i = startIndex; i < endIndex; i++) {
-            batch[i - startIndex] = allTokens[i];
-        }
-
-        return batch;
-    }
-
     receive() external payable {}
 }
