@@ -60,7 +60,7 @@ contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard {
         emit LaunchCostUpdated(newCost);
     }
 
-    function withdraw() public {
+    function withdraw() public onlyOwner {
         (bool sent,) = owner().call{value: address(this).balance}("");
         require(sent, "Failed to send Ether");
     }
