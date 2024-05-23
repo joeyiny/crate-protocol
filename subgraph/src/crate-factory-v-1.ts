@@ -13,10 +13,9 @@ export function handleTokenLaunched(event: TokenLaunchedEvent): void {
   entity.blockNumber = event.block.number;
   entity.blockTimestamp = event.block.timestamp;
   entity.transactionHash = event.transaction.hash;
-  entity.price = new BigInt(0);
-  entity.totalSupply = BigInt.fromString("100000000000");
-  entity.totalCurveSupply = BigInt.fromString("80000000000");
-  entity.amountOfTokensInCurve = BigInt.fromString("80000000000");
+  entity.totalSupply = BigInt.fromString("106500000000000000000000");
+  entity.totalCurveSupply = BigInt.fromString("80000000000000000000000");
+  entity.amountOfTokensInCurve = BigInt.fromString("80000000000000000000000");
   entity.amountOfEthInCurve = new BigInt(0);
   entity.tokensInCirculation = new BigInt(0);
   entity.save();
