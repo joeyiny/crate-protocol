@@ -1,5 +1,5 @@
 import { log } from "@graphprotocol/graph-ts";
-import { CrateToken, Trade, Trader, TokenBalance } from "../generated/schema";
+import { CrateToken, Trade, Trader, TokenBalance, ProtocolStats } from "../generated/schema";
 import { TokenPurchase as TokenPurchaseEvent } from "../generated/templates/CrateBondingCurveV1/CrateBondingCurveV1";
 import { TokenTrade as TokenTradeEvent } from "../generated/templates/CrateTokenV1/CrateTokenV1";
 import { BigInt } from "@graphprotocol/graph-ts";
@@ -39,41 +39,37 @@ export function handleTokenTrade(event: TokenTradeEvent): void {
   }
   trade.price = price;
   trade.save();
-  token.price = price;
   if (isPurchase) {
     token.amountOfEthInCurve = token.amountOfEthInCurve.plus(trade.ethTraded);
-    token.amountOfTokensInCurve = token.amountOfTokensInCurve.minus(
-      trade.tokenTraded,
-    );
-    token.tokensInCirculation = token.tokensInCirculation.plus(
-      trade.tokenTraded,
-    );
+    token.amountOfTokensInCurve = token.amountOfTokensInCurve.minus(trade.tokenTraded);
+    token.tokensInCirculation = token.tokensInCirculation.plus(trade.tokenTraded);
   } else {
     token.amountOfEthInCurve = token.amountOfEthInCurve.minus(trade.ethTraded);
-    token.amountOfTokensInCurve = token.amountOfTokensInCurve.plus(
-      trade.tokenTraded,
-    );
-    token.tokensInCirculation = token.tokensInCirculation.minus(
-      trade.tokenTraded,
-    );
+    token.amountOfTokensInCurve = token.amountOfTokensInCurve.plus(trade.tokenTraded);
+    token.tokensInCirculation = token.tokensInCirculation.minus(trade.tokenTraded);
   }
 
   token.save();
 
-  updateOrCreateTokenBalance(
-    trader,
-    token,
-    event.params.tokenAmount,
-    isPurchase,
-  );
+  updateOrCreateTokenBalance(trader, token, event.params.tokenAmount, isPurchase);
+
+  let protocolStats = ProtocolStats.load("singleton");
+  if (!protocolStats) {
+    protocolStats = new ProtocolStats("singleton");
+    protocolStats.volume = BigInt.fromI32(0);
+    protocolStats.numberOfTrades = BigInt.fromI32(0);
+    protocolStats.tvl = BigInt.fromI32(0);
+  }
+
+  // Update ProtocolStats
+  protocolStats.volume = protocolStats.volume.plus(trade.ethTraded);
+  protocolStats.numberOfTrades = protocolStats.numberOfTrades.plus(BigInt.fromI32(1));
+  protocolStats.tvl = token.amountOfEthInCurve; // Update with relevant TVL calculation logic
+
+  protocolStats.save();
 }
 
-function updateOrCreateTokenBalance(
-  trader: Trader,
-  token: CrateToken,
-  amount: BigInt,
-  isPurchase: boolean,
-): void {
+function updateOrCreateTokenBalance(trader: Trader, token: CrateToken, amount: BigInt, isPurchase: boolean): void {
   let tokenBalanceId = token.id.toHex() + "-" + trader.id.toHex();
   let tokenBalance = TokenBalance.load(tokenBalanceId);
 

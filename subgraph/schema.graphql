@@ -1,40 +1,48 @@
 type CrateToken @entity {
-    id: Bytes! # address
-    name: String! # string
-    symbol: String! # string
-    blockNumber: BigInt!
-    blockTimestamp: BigInt!
-    transactionHash: Bytes!
-    price: BigInt!
-    totalSupply: BigInt!
-    totalCurveSupply: BigInt!
-    amountOfTokensInCurve: BigInt!
-    amountOfEthInCurve: BigInt!
-    tokensInCirculation: BigInt!
-    trades: [Trade!]! @derivedFrom(field: "token")
+  id: Bytes! # address
+  name: String! # string
+  symbol: String! # string
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  volume: BigInt!
+  numberOfTrades: BigInt!
+  totalSupply: BigInt!
+  totalCurveSupply: BigInt!
+  amountOfTokensInCurve: BigInt!
+  amountOfEthInCurve: BigInt!
+  tokensInCirculation: BigInt!
+  trades: [Trade!]! @derivedFrom(field: "token")
+}
+
+type ProtocolStats @entity {
+  id: ID! # singleton ID
+  volume: BigInt!
+  numberOfTrades: BigInt!
+  tvl: BigInt!
 }
 
 type Trade @entity(immutable: true) {
-    id: Bytes! # address
-    blockNumber: BigInt!
-    blockTimestamp: BigInt!
-    transactionHash: Bytes!
-    isPurchase: Boolean!
-    ethTraded: BigInt!
-    tokenTraded: BigInt!
-    price: BigInt!
-    token: CrateToken!
-    trader: Trader!
+  id: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  isPurchase: Boolean!
+  ethTraded: BigInt!
+  tokenTraded: BigInt!
+  price: BigInt!
+  token: CrateToken!
+  trader: Trader!
 }
 
 type Trader @entity {
-    id: Bytes!
-    balances: [TokenBalance!] @derivedFrom(field: "trader")
+  id: Bytes!
+  balances: [TokenBalance!] @derivedFrom(field: "trader")
 }
 
 type TokenBalance @entity {
-    id: String!
-    token: CrateToken!
-    trader: Trader!
-    balance: BigInt!
+  id: String!
+  token: CrateToken!
+  trader: Trader!
+  balance: BigInt!
 }
