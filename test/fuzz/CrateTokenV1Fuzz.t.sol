@@ -62,8 +62,8 @@ contract CrateTokenV1Test is TestUtils {
     }
 
     function testfuzz_Sell(uint256 buyAmount, uint256 sellAmount) public prank(bob) {
-        buyAmount = bound(buyAmount, 1e20, 1e21);
-        sellAmount = bound(sellAmount, 1e18, 1e19);
+        buyAmount = bound(buyAmount, 20_001e18, 79_000e18);
+        sellAmount = bound(sellAmount, 1e18, 19_000e18);
         token.buy{value: 1000 ether}(buyAmount);
         token.sell(sellAmount, 0);
         assertTrue(token.balanceOf(bob) == buyAmount - sellAmount);

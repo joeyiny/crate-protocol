@@ -77,7 +77,7 @@ contract CrateFactoryV1Test is TestUtils {
         // Initial balance of the tester
         uint256 initialBalance = address(this).balance;
 
-        uint256 sentAmount = factory.launchCost();
+        //uint256 sentAmount = factory.launchCost();
 
         // Creating a token and sending more ETH than required
         string memory name = "ExcessToken";
