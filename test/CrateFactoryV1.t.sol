@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "forge-std/Vm.sol";
-import "forge-std/console.sol";
-import "ds-test/test.sol";
+import {TestUtils} from "@test/utils/TestUtils.sol";
 import "../src/CrateFactoryV1.sol";
 
-contract CrateFactoryV1Test is DSTest {
+contract CrateFactoryV1Test is TestUtils {
     CrateFactoryV1 factory;
     address uniswapRouter = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
     address tester;
