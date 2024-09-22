@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {TestUtils} from "@test/utils/TestUtils.sol";
-import "../src/CrateFactoryV1.sol";
+import {TestUtils} from "test/utils/TestUtils.sol";
+import "src/CrateFactoryV1.sol";
 
 contract CrateFactoryV1Test is TestUtils {
     CrateFactoryV1 factory;
@@ -107,8 +107,8 @@ contract CrateFactoryV1Test is TestUtils {
         assertTrue(firstClone != address(0), "First token creation failed");
 
         // Second token creation with the same salt should fail
-        address secondClone = address(factory.createToken{value: factory.launchCost()}(name, symbol, songURI, salt));
+        factory.createToken{value: factory.launchCost()}(name, symbol, songURI, salt);
     }
 
-    receive() external payable {} // Allow this contract to receive ETH
+    receive() external payable {}
 }

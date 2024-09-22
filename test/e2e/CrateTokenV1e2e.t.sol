@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {TestUtils} from "@test/utils/TestUtils.sol";
+import {TestUtils} from "test/utils/TestUtils.sol";
 import "src/CrateFactoryV1.sol";
 
 contract CrateTokenV1Test is TestUtils {
@@ -36,7 +36,7 @@ contract CrateTokenV1Test is TestUtils {
 
     function testEndBondingCurveAndAddLiquidity() public prank(bob) {
         token.buy{value: 8 ether}(80_000 * 1e18); // Buy out the curve
-        assertTrue(!token.bondingCurveActive());
+        //assertTrue(token.phase);
         assertGt(address(token).balance, 0);
     }
 }

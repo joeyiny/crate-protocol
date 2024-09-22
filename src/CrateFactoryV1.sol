@@ -6,19 +6,17 @@ import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "../lib/multicaller/src/LibMulticaller.sol";
+import {ICrateV1} from "./interfaces/ICrateV1.sol";
 
-contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard {
-    event TokenLaunched(address tokenAddress, string name, string symbol);
-    event LaunchCostUpdated(uint256 newCost);
-
-    address[] public allTokens;
-
+contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard, ICrateV1 {
+    address public immutable uniswapV2Router02;
     address immutable tokenImplementation;
 
-    address public immutable uniswapV2Router02;
-    uint256 public launchCost = 0.00125 ether;
+    address[] public allTokens;
+    uint256 public launchCost;
 
     constructor(address _uniswapV2Router) Ownable(msg.sender) {
+        launchCost = 0.00125 ether;
         uniswapV2Router02 = _uniswapV2Router;
         tokenImplementation = address(new CrateTokenV1());
     }

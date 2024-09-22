@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {TestUtils} from "@test/utils/TestUtils.sol";
+import {TestUtils} from "test/utils/TestUtils.sol";
 import "src/CrateFactoryV1.sol";
 
 /// @dev forge test --match-contract CrateTokenV1Test -vvv
@@ -32,7 +32,10 @@ contract CrateTokenV1Test is TestUtils {
         vm.stopPrank();
     }
 
-    function testFuzz_InitialSetup(string memory name, string memory symbol, string memory songURI) public prank(alice) {
+    function testFuzz_InitialSetup(string memory name, string memory symbol, string memory songURI)
+        public
+        prank(alice)
+    {
         vm.assume(bytes(name).length > 0);
         vm.assume(bytes(symbol).length > 0);
         vm.assume(bytes(songURI).length > 0);
@@ -40,7 +43,7 @@ contract CrateTokenV1Test is TestUtils {
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
         address tokenAddress = address(factory.createToken{value: 0.00125 ether}(name, symbol, songURI, salt));
         CrateTokenV1 token2 = CrateTokenV1(tokenAddress);
-        
+
         assertEq(token2.name(), name);
         assertEq(token2.symbol(), symbol);
         assertEq(token2.totalSupply(), 117_000 * 1e18);
