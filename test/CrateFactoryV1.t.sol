@@ -2,9 +2,11 @@
 pragma solidity ^0.8.24;
 
 import {TestUtils} from "test/utils/TestUtils.sol";
-import "src/CrateFactoryV1.sol";
+import {CrateFactoryV1} from "src/CrateFactoryV1.sol";
+import {CrateTokenV1} from "src/CrateTokenV1.sol";
+import {ICrateV1} from "src/interfaces/ICrateV1.sol";
 
-contract CrateFactoryV1Test is TestUtils {
+contract CrateFactoryV1Test is TestUtils, ICrateV1 {
     CrateFactoryV1 factory;
     address uniswapRouter = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
     address tester;

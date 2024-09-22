@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
-import "./CrateTokenV1.sol";
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {ICrateV1} from "./interfaces/ICrateV1.sol";
+import {CrateFactoryV1} from "src/CrateFactoryV1.sol";
+import {CrateTokenV1} from "src/CrateTokenV1.sol";
+import {ICrateV1} from "src/interfaces/ICrateV1.sol";
 
 contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard, ICrateV1 {
     address public immutable uniswapV2Router02;

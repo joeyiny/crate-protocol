@@ -2,10 +2,12 @@
 pragma solidity ^0.8.24;
 
 import {TestUtils} from "test/utils/TestUtils.sol";
-import "src/CrateFactoryV1.sol";
+import {CrateFactoryV1} from "src/CrateFactoryV1.sol";
+import {CrateTokenV1} from "src/CrateTokenV1.sol";
+import {ICrateV1} from "src/interfaces/ICrateV1.sol";
 
 /// @dev forge test --match-contract CrateTokenV1Test -vvv
-contract CrateTokenV1Test is TestUtils {
+contract CrateTokenV1Test is TestUtils, ICrateV1 {
     CrateFactoryV1 factory;
     CrateTokenV1 token;
     address uniswapRouter = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24; //Router on Base
@@ -61,11 +63,27 @@ contract CrateTokenV1Test is TestUtils {
         assertTrue(token.balanceOf(bob) == tokenAmount);
     }
 
-    function testfuzz_Sell(uint256 buyAmount, uint256 sellAmount) public prank(bob) {
-        buyAmount = bound(buyAmount, 20_001e18, 79_000e18);
-        sellAmount = bound(sellAmount, 1e18, 19_000e18);
+    function testfuzz_Sell_BondingCurve_One(uint256 buyAmount) public prank(bob) {
+        buyAmount = bound(buyAmount, 20_001e18, 79_000e18); /// Purchase out the crowdfund
         token.buy{value: 1000 ether}(buyAmount);
-        token.sell(sellAmount, 0);
-        assertTrue(token.balanceOf(bob) == buyAmount - sellAmount);
+        token.sell(token.balanceOf(bob), 0);
+        assertEq(token.balanceOf(bob), 0);
+    }
+
+    function testfuzz_Sell_BondingCurve_Two(uint256 buyAmount) public prank(bob) {
+        buyAmount = bound(buyAmount, 20_001e18, 69_000e18); /// Purchase out the crowdfund
+        token.buy{value: 100 ether}(buyAmount);
+        uint256 buyAmountTwo = 10_000e18;
+        token.buy{value: 100 ether}(buyAmountTwo);
+        token.sell(token.balanceOf(bob), 0);
+        assertEq(token.balanceOf(bob), 0);
+    }
+
+    function testfuzz_Sell_Crowdfund(uint256 buyAmount) public prank(bob) {
+        buyAmount = bound(buyAmount, 1e18, 19_999e18);
+        token.buy{value: 1000 ether}(buyAmount);
+        uint256 amountToSell = token.balanceOf(bob);
+        vm.expectRevert(WrongPhase.selector);
+        token.sell(amountToSell, 0);
     }
 }

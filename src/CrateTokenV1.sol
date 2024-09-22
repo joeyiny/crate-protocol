@@ -3,8 +3,8 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {IUniswapV2Router02} from "./interfaces/IUniswapV2RouterV2.sol";
-import {ICrateV1} from "./interfaces/ICrateV1.sol";
+import {IUniswapV2Router02} from "src/interfaces/IUniswapV2RouterV2.sol";
+import {ICrateV1} from "src/interfaces/ICrateV1.sol";
 
 // The total supply is 117,000 tokens
 // Once the bonding curve has sold out 80,000 tokens, the other 37,000 are put in Uniswap with the total ETH in the contract.
@@ -63,7 +63,6 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, ICrateV1 {
     }
 
     function buy(uint256 _amount) public payable nonReentrant {
-        if (phase == Phase.MARKET) revert WrongPhase();
         if (_amount > tokensInCurve) revert InsufficientTokens();
         if (tokensInCurve >= 10 ** decimals()) {
             if (_amount < 10 ** decimals()) revert MustBuyAtLeastOneToken();
@@ -71,15 +70,47 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, ICrateV1 {
             _amount = tokensInCurve;
         }
 
-        uint256 totalPayment = processPaymentDuringBondingCurve(_amount, true);
-        if (msg.value < totalPayment) revert InsufficientPayment();
+        uint256 totalPayment;
+        uint256 crateFee;
+        uint256 artistFee;
 
-        tokensInCurve -= _amount;
+        if (phase == Phase.CROWDFUND) {
+            if (tokensInCurve - _amount < CROWDFUND_THRESHOLD) {
+                phase = Phase.BONDING_CURVE;
+                uint256 excess = CROWDFUND_THRESHOLD - (tokensInCurve - _amount);
+                uint256 crowdfundPrice = getBuyPrice(_amount - excess);
+                tokensInCurve -= (_amount - excess);
+                uint256 bondingCurvePrice = getBuyPrice(excess);
+                tokensInCurve -= excess;
+                crateFee = (crowdfundPrice / 10) + (bondingCurvePrice * CRATE_FEE_PERCENT) / 1 ether;
+                artistFee = ((crowdfundPrice * 9) / 10) + (bondingCurvePrice * ARTIST_FEE_PERCENT) / 1 ether;
+                totalPayment = crateFee + artistFee + bondingCurvePrice;
+            } else {
+                uint256 price = getBuyPrice(_amount);
+                tokensInCurve -= _amount;
+                crateFee = (price / 10);
+                artistFee = ((price * 9) / 10);
+                totalPayment = crateFee + artistFee;
+            }
+        } else if (phase == Phase.BONDING_CURVE) {
+            uint256 price = getBuyPrice(_amount);
+            tokensInCurve -= _amount;
+            crateFee = (price * CRATE_FEE_PERCENT) / 1 ether;
+            artistFee = (price * ARTIST_FEE_PERCENT) / 1 ether;
+            totalPayment = price + crateFee + artistFee;
+        } else revert WrongPhase();
+
+        artistFees += artistFee;
+        if (msg.value < totalPayment) revert InsufficientPayment();
+        
         _transfer(address(this), msg.sender, _amount);
         emit TokenTrade(msg.sender, _amount, true, totalPayment);
 
         (bool refundSuccess,) = (msg.sender).call{value: msg.value - totalPayment}("");
         if (!refundSuccess) revert TransferFailed();
+
+        (bool crateFeePaid,) = protocolFeeDestination.call{value: crateFee}("");
+        if (!crateFeePaid) revert TransferFailed();
 
         if (tokensInCurve == 0) {
             phase = Phase.MARKET;
@@ -93,14 +124,29 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, ICrateV1 {
         if (balanceOf(msg.sender) < _amount) revert InsufficientTokens();
         if (_amount < 10 ** decimals()) revert MustSellAtLeastOneToken();
 
-        uint256 netSellerProceeds = processPaymentDuringBondingCurve(_amount, false);
+        /// @dev cache to use below for transfer
+        uint256 amount = _amount;
+        if (tokensInCurve + _amount >= CROWDFUND_THRESHOLD) {
+            phase = Phase.CROWDFUND;
+            _amount -= (tokensInCurve + _amount - CROWDFUND_THRESHOLD);
+        }
+
+        uint256 price = getSellPrice(_amount);
+        uint256 crateFee = (price * CRATE_FEE_PERCENT) / 1 ether;
+        uint256 artistFee = (price * ARTIST_FEE_PERCENT) / 1 ether;
+        artistFees += artistFee;
+        uint256 netSellerProceeds = price - crateFee - artistFee;
         if (netSellerProceeds < minEtherReceivable) revert SlippageToleranceExceeded();
-        tokensInCurve += _amount;
-        _transfer(msg.sender, address(this), _amount);
-        emit TokenTrade(msg.sender, _amount, false, netSellerProceeds);
+
+        tokensInCurve += amount;
+        _transfer(msg.sender, address(this), amount);
+        emit TokenTrade(msg.sender, amount, false, netSellerProceeds);
 
         (bool netProceedsSent,) = (msg.sender).call{value: netSellerProceeds}("");
         if (!netProceedsSent) revert TransferFailed();
+
+        (bool crateFeePaid,) = protocolFeeDestination.call{value: crateFee}("");
+        if (!crateFeePaid) revert TransferFailed();
     }
 
     function withdrawArtistFees() public nonReentrant {
@@ -170,16 +216,5 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, ICrateV1 {
         (bool protocolFeePaid,) = protocolFeeDestination.call{value: 0.3 ether}("");
         if (!protocolFeePaid) revert TransferFailed();
         emit LiquidityAdded(amountToken, amountETH, liquidity);
-    }
-
-    function processPaymentDuringBondingCurve(uint256 _amount, bool _buy) internal returns (uint256 payment) {
-        uint256 price;
-        _buy ? price = getBuyPrice(_amount) : price = getSellPrice(_amount);
-        uint256 crateFee = (price * CRATE_FEE_PERCENT) / 1 ether;
-        uint256 artistFee = (price * ARTIST_FEE_PERCENT) / 1 ether;
-        artistFees += artistFee;
-        _buy ? payment = price + crateFee + artistFee : payment = price - crateFee - artistFee;
-        (bool crateFeePaid,) = protocolFeeDestination.call{value: crateFee}("");
-        if (!crateFeePaid) revert TransferFailed();
     }
 }
