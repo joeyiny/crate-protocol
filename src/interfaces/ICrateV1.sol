@@ -22,6 +22,7 @@ interface ICrateV1 {
 
     error Zero();
     error WrongPhase();
+    error OnlyArtist();
     error TransferFailed();
     error InsufficientTokens();
     error MustBuyAtLeastOneToken();

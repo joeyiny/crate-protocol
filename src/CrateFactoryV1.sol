@@ -5,7 +5,6 @@ import "./CrateTokenV1.sol";
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "../lib/multicaller/src/LibMulticaller.sol";
 import {ICrateV1} from "./interfaces/ICrateV1.sol";
 
 contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard, ICrateV1 {
@@ -27,15 +26,12 @@ contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard, ICrateV1 {
         nonReentrant
         returns (address)
     {
-        address sender = LibMulticaller.sender();
-
-        require(msg.value == launchCost, "Did not send correct launch cost.");
-        address clone = Clones.cloneDeterministic(tokenImplementation, _saltedSalt(sender, salt));
+        if (msg.value != launchCost) revert InsufficientPayment();
+        address clone = Clones.cloneDeterministic(tokenImplementation, _saltedSalt(msg.sender, salt));
         CrateTokenV1 newToken = CrateTokenV1(clone);
         allTokens.push(address(newToken));
         emit TokenLaunched(address(newToken), name, symbol);
-        newToken.initialize(uniswapV2Router02, name, symbol, address(this), sender, songURI);
-
+        newToken.initialize(uniswapV2Router02, name, symbol, address(this), msg.sender, songURI);
         return address(newToken);
     }
 
@@ -60,7 +56,7 @@ contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard, ICrateV1 {
 
     function withdraw() public onlyOwner {
         (bool sent,) = owner().call{value: address(this).balance}("");
-        require(sent, "Failed to send Ether");
+        if (!sent) revert TransferFailed();
     }
 
     receive() external payable {}

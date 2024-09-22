@@ -3,7 +3,6 @@ pragma solidity ^0.8.24;
 
 import "lib/openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "../lib/multicaller/src/LibMulticaller.sol";
 import {IUniswapV2Router02} from "./interfaces/IUniswapV2RouterV2.sol";
 import {ICrateV1} from "./interfaces/ICrateV1.sol";
 
@@ -61,7 +60,6 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, ICrateV1 {
     }
 
     function buy(uint256 _amount) public payable nonReentrant {
-        address sender = LibMulticaller.sender();
         if (phase == Phase.MARKET) revert WrongPhase();
         if (_amount > tokensInCurve) revert InsufficientTokens();
         if (tokensInCurve >= 10 ** decimals()) {
@@ -78,13 +76,12 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, ICrateV1 {
 
         if (msg.value < totalPayment) revert InsufficientPayment();
         tokensInCurve -= _amount;
-
-        _transfer(address(this), sender, _amount);
-        emit TokenTrade(sender, _amount, true, totalPayment);
+        _transfer(address(this), msg.sender, _amount);
+        emit TokenTrade(msg.sender, _amount, true, totalPayment);
 
         (bool crateFeePaid,) = protocolFeeDestination.call{value: crateFee}("");
         if (!crateFeePaid) revert TransferFailed();
-        (bool refundSuccess,) = sender.call{value: msg.value - totalPayment}("");
+        (bool refundSuccess,) = (msg.sender).call{value: msg.value - totalPayment}("");
         if (!refundSuccess) revert TransferFailed();
 
         if (tokensInCurve == 0) {
@@ -95,10 +92,8 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, ICrateV1 {
     }
 
     function sell(uint256 _amount, uint256 minEtherReceivable) external nonReentrant {
-        address sender = LibMulticaller.sender();
-
         if (phase != Phase.BONDING_CURVE) revert WrongPhase();
-        if (balanceOf(sender) < _amount) revert InsufficientTokens();
+        if (balanceOf(msg.sender) < _amount) revert InsufficientTokens();
         if (_amount < 10 ** decimals()) revert MustSellAtLeastOneToken();
 
         /// @dev this is repeated logic
@@ -110,10 +105,10 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, ICrateV1 {
 
         if (netSellerProceeds < minEtherReceivable) revert SlippageToleranceExceeded();
         tokensInCurve += _amount;
-        _transfer(sender, address(this), _amount);
-        emit TokenTrade(sender, _amount, false, netSellerProceeds);
+        _transfer(msg.sender, address(this), _amount);
+        emit TokenTrade(msg.sender, _amount, false, netSellerProceeds);
 
-        (bool netProceedsSent,) = sender.call{value: netSellerProceeds}("");
+        (bool netProceedsSent,) = (msg.sender).call{value: netSellerProceeds}("");
         if (!netProceedsSent) revert TransferFailed();
         (bool crateFeePaid,) = protocolFeeDestination.call{value: crateFee}("");
         if (!crateFeePaid) revert TransferFailed();
@@ -146,7 +141,6 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, ICrateV1 {
         return bondingCurve(supply + amount) - bondingCurve(supply);
     }
 
-    // Takes in the amount of tokens, returns cost of all tokens up to that point.
     function bondingCurve(uint256 x) public pure returns (uint256) {
         return (x * (x / 1e10 + 1)) / 16e16;
     }
@@ -156,7 +150,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, ICrateV1 {
         uint256 amountETHDesired = address(this).balance - artistFees - 0.3 ether;
 
         // Ensure we have some tokens and ETH to add to the pool
-        require(amountTokenDesired > 0 && amountETHDesired > 0, "Insufficient tokens or ETH for liquidity.");
+        if (amountTokenDesired == 0 || amountETHDesired == 0) revert Zero();
 
         // Calculate the minimum amounts based on a fair price to prevent front-running
         uint256 minTokenPrice = getPrice(MAX_CURVE_SUPPLY, 1e18); // Fair market price for 1 token
@@ -171,21 +165,19 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, ICrateV1 {
             address(0), //where to send LP tokens
             block.timestamp // Deadline (current time)
         );
-        require(amountToken > 0 && amountETH > 0 && liquidity > 0, "Liquidity addition failed.");
+        if (amountToken == 0 || amountETH == 0 || liquidity == 0) revert Zero();
         (bool protocolFeePaid,) = protocolFeeDestination.call{value: 0.3 ether}("");
-        require(protocolFeePaid, "Failed to pay protocol fee");
-
+        if (!protocolFeePaid) revert TransferFailed();
         emit LiquidityAdded(amountToken, amountETH, liquidity);
     }
 
-    function withdrawArtistFees() public {
-        address sender = LibMulticaller.sender();
-        require(sender == artistFeeDestination, "Unauthorized");
-        require(artistFees > 0, "No fees to withdraw");
+    function withdrawArtistFees() public nonReentrant {
+        if (msg.sender != artistFeeDestination) revert OnlyArtist();
+        if (artistFees == 0) revert Zero();
         uint256 fees = artistFees;
         artistFees = 0;
-        (bool artistFeePaid,) = artistFeeDestination.call{value: fees, gas: 2300}("");
-        require(artistFeePaid, "Failed to pay artist fee");
+        (bool artistFeePaid,) = artistFeeDestination.call{value: fees}("");
+        if (!artistFeePaid) revert TransferFailed();
         emit ArtistFeesWithdrawn(artistFeeDestination, fees);
     }
 }
