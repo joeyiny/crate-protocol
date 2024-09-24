@@ -60,16 +60,6 @@ contract CrateFactoryV1Test is TestUtils, ICrateV1 {
         factory.createToken{value: 0.0001 ether}(name, symbol, songURI, salt); // Not enough ETH
     }
 
-    function testFailCreateTokenWithTooMuchEth() public {
-        // Attempt to create a token without sending enough ETH should fail
-        string memory name = "FailToken";
-        string memory symbol = "FTK";
-        string memory songURI = "example.com";
-        bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
-
-        factory.createToken{value: 0.1 ether}(name, symbol, songURI, salt); // Not enough ETH
-    }
-
     function testUpdateLaunchCostAndCreateToken() public {
         // First, update the launch cost by the owner
         uint256 newLaunchCost = 0.5 ether; // Updated launch cost

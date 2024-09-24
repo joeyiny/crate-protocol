@@ -27,7 +27,7 @@ contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard, ICrateV1 {
         nonReentrant
         returns (address)
     {
-        if (msg.value != launchCost) revert InsufficientPayment();
+        if (msg.value < launchCost) revert InsufficientPayment();
         address clone = Clones.cloneDeterministic(tokenImplementation, _saltedSalt(msg.sender, salt));
         CrateTokenV1 newToken = CrateTokenV1(clone);
         allTokens.push(address(newToken));
