@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
-interface ICrateV1 {
+interface ICrateV2 {
     /// FACTORY ///
 
     event TokenLaunched(address tokenAddress, string name, string symbol);

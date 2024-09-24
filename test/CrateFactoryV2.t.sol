@@ -2,19 +2,19 @@
 pragma solidity ^0.8.24;
 
 import {TestUtils} from "test/utils/TestUtils.sol";
-import {CrateFactoryV1} from "src/CrateFactoryV1.sol";
-import {CrateTokenV1} from "src/CrateTokenV1.sol";
-import {ICrateV1} from "src/interfaces/ICrateV1.sol";
+import {CrateFactoryV2} from "src/CrateFactoryV2.sol";
+import {CrateTokenV2} from "src/CrateTokenV2.sol";
+import {ICrateV2} from "src/interfaces/ICrateV2.sol";
 
-contract CrateFactoryV1Test is TestUtils, ICrateV1 {
-    CrateFactoryV1 factory;
+contract CrateFactoryV2Test is TestUtils, ICrateV2 {
+    CrateFactoryV2 factory;
     address uniswapRouter = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
     address tester;
 
     function setUp() public {
         // Set up the environment before each test
         tester = address(this);
-        factory = new CrateFactoryV1(uniswapRouter);
+        factory = new CrateFactoryV2(uniswapRouter);
     }
 
     function testCreateToken() public {
@@ -29,8 +29,8 @@ contract CrateFactoryV1Test is TestUtils, ICrateV1 {
         assertTrue(tokenAddress != address(0), "Token creation failed.");
         assertEq(factory.allTokens(0), tokenAddress, "Token address should be recorded in allTokens.");
 
-        // Check token details (assuming public view functions in CrateTokenV1 for this)
-        CrateTokenV1 token = CrateTokenV1(tokenAddress);
+        // Check token details (assuming public view functions in CrateTokenV2 for this)
+        CrateTokenV2 token = CrateTokenV2(tokenAddress);
         assertEq(token.name(), name, "Token name should match.");
         assertEq(token.symbol(), symbol, "Token symbol should match.");
         assertEq(token.songURI(), songURI, "Song URI should match.");

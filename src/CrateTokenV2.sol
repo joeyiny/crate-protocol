@@ -5,12 +5,12 @@ import {ERC20Upgradeable} from "@openzeppelin-upgradeable/contracts/token/ERC20/
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {LibMulticaller} from "@multicaller/LibMulticaller.sol";
 import {IUniswapV2Router02} from "src/interfaces/IUniswapV2RouterV2.sol";
-import {ICrateV1} from "src/interfaces/ICrateV1.sol";
+import {ICrateV2} from "src/interfaces/ICrateV2.sol";
 
 // The total supply is 117,000 tokens
 // Once the bonding curve has sold out 80,000 tokens, the other 37,000 are put in Uniswap with the total ETH in the contract.
 // The LP tokens are then burned, so no one can pull the liquidity.
-contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, ICrateV1 {
+contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     uint256 private constant MAX_SUPPLY = 117_000e18;
     uint256 private constant MAX_CURVE_SUPPLY = 80_000e18;
     uint256 private constant CROWDFUND_THRESHOLD = 60_000e18;
@@ -59,7 +59,9 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, ICrateV1 {
         uint256 netValue = ((msg.value - preFee) * 999) / 1000;
         uint256 tokensToBuy = estimateMaxPurchase(netValue);
         if (tokensToBuy == 0) revert Zero();
-        if (tokensToBuy < minTokensReceivable) revert SlippageToleranceExceeded();
+        if (tokensToBuy < minTokensReceivable) {
+            revert SlippageToleranceExceeded();
+        }
         buy(tokensToBuy);
     }
 
@@ -100,11 +102,13 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, ICrateV1 {
             crateFee = (price * CRATE_FEE_PERCENT) / 1 ether;
             artistFee = (price * ARTIST_FEE_PERCENT) / 1 ether;
             totalPayment = price + crateFee + artistFee;
-        } else revert WrongPhase();
+        } else {
+            revert WrongPhase();
+        }
 
         artistFees += artistFee;
         if (msg.value < totalPayment) revert InsufficientPayment();
-        
+
         _transfer(address(this), sender, _amount);
         emit TokenTrade(sender, _amount, true, totalPayment);
 
@@ -140,7 +144,9 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, ICrateV1 {
         uint256 artistFee = (price * ARTIST_FEE_PERCENT) / 1 ether;
         artistFees += artistFee;
         uint256 netSellerProceeds = price - crateFee - artistFee;
-        if (netSellerProceeds < minEtherReceivable) revert SlippageToleranceExceeded();
+        if (netSellerProceeds < minEtherReceivable) {
+            revert SlippageToleranceExceeded();
+        }
 
         tokensInCurve += amount;
         _transfer(sender, address(this), amount);

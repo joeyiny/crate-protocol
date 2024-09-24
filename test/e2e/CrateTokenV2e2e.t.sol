@@ -2,13 +2,13 @@
 pragma solidity ^0.8.24;
 
 import {TestUtils} from "test/utils/TestUtils.sol";
-import {CrateFactoryV1} from "src/CrateFactoryV1.sol";
-import {CrateTokenV1} from "src/CrateTokenV1.sol";
-import {ICrateV1} from "src/interfaces/ICrateV1.sol";
+import {CrateFactoryV2} from "src/CrateFactoryV2.sol";
+import {CrateTokenV2} from "src/CrateTokenV2.sol";
+import {ICrateV2} from "src/interfaces/ICrateV2.sol";
 
-contract CrateTokenV1Test is TestUtils, ICrateV1 {
-    CrateFactoryV1 factory;
-    CrateTokenV1 token;
+contract CrateTokenV2Test is TestUtils, ICrateV2 {
+    CrateFactoryV2 factory;
+    CrateTokenV2 token;
     address uniswapRouter = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24; //Router on Base
 
     address owner = address(0x420);
@@ -26,13 +26,13 @@ contract CrateTokenV1Test is TestUtils, ICrateV1 {
         vm.deal(bob, 1000 ether);
 
         vm.startPrank(owner);
-        factory = new CrateFactoryV1(uniswapRouter);
+        factory = new CrateFactoryV2(uniswapRouter);
         string memory name = "TestToken";
         string memory symbol = "TTK";
         string memory songURI = "example.com";
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
         address tokenAddress = address(factory.createToken{value: 0.00125 ether}(name, symbol, songURI, salt));
-        token = CrateTokenV1(tokenAddress);
+        token = CrateTokenV2(tokenAddress);
         vm.stopPrank();
     }
 

@@ -8,8 +8,8 @@ optimizer_runs = 420_000
 fuzz_max_global_rejects = 420_000
 
 gas_reports = [
-    "CrateFactoryV1",
-    "CrateTokenV1"
+    "CrateFactoryV2",
+    "CrateTokenV2"
 ]
 
 remappings = [

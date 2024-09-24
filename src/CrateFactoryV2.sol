@@ -5,11 +5,11 @@ import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {LibMulticaller} from "@multicaller/LibMulticaller.sol";
-import {CrateFactoryV1} from "src/CrateFactoryV1.sol";
-import {CrateTokenV1} from "src/CrateTokenV1.sol";
-import {ICrateV1} from "src/interfaces/ICrateV1.sol";
+import {CrateFactoryV2} from "src/CrateFactoryV2.sol";
+import {CrateTokenV2} from "src/CrateTokenV2.sol";
+import {ICrateV2} from "src/interfaces/ICrateV2.sol";
 
-contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard, ICrateV1 {
+contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
     address public immutable uniswapV2Router02;
     address immutable tokenImplementation;
 
@@ -19,7 +19,7 @@ contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard, ICrateV1 {
     constructor(address _uniswapV2Router) Ownable(msg.sender) {
         launchCost = 0.00125 ether;
         uniswapV2Router02 = _uniswapV2Router;
-        tokenImplementation = address(new CrateTokenV1());
+        tokenImplementation = address(new CrateTokenV2());
     }
 
     function createToken(string memory name, string memory symbol, string memory songURI, bytes32 salt)
@@ -27,11 +27,11 @@ contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard, ICrateV1 {
         payable
         nonReentrant
         returns (address)
-    {   
+    {
         address sender = LibMulticaller.sender();
         if (msg.value < launchCost) revert InsufficientPayment();
         address clone = Clones.cloneDeterministic(tokenImplementation, _saltedSalt(sender, salt));
-        CrateTokenV1 newToken = CrateTokenV1(clone);
+        CrateTokenV2 newToken = CrateTokenV2(clone);
         allTokens.push(address(newToken));
         emit TokenLaunched(address(newToken), name, symbol);
         newToken.initialize(uniswapV2Router02, name, symbol, address(this), sender, songURI);
