@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/access/Ownable2Step.sol";
-import "@openzeppelin/contracts/proxy/Clones.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {LibMulticaller} from "@multicaller/LibMulticaller.sol";
 import {CrateFactoryV1} from "src/CrateFactoryV1.sol";
 import {CrateTokenV1} from "src/CrateTokenV1.sol";
 import {ICrateV1} from "src/interfaces/ICrateV1.sol";
@@ -26,13 +27,14 @@ contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard, ICrateV1 {
         payable
         nonReentrant
         returns (address)
-    {
+    {   
+        address sender = LibMulticaller.sender();
         if (msg.value < launchCost) revert InsufficientPayment();
-        address clone = Clones.cloneDeterministic(tokenImplementation, _saltedSalt(msg.sender, salt));
+        address clone = Clones.cloneDeterministic(tokenImplementation, _saltedSalt(sender, salt));
         CrateTokenV1 newToken = CrateTokenV1(clone);
         allTokens.push(address(newToken));
         emit TokenLaunched(address(newToken), name, symbol);
-        newToken.initialize(uniswapV2Router02, name, symbol, address(this), msg.sender, songURI);
+        newToken.initialize(uniswapV2Router02, name, symbol, address(this), sender, songURI);
         return address(newToken);
     }
 

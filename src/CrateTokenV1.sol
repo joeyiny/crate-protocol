@@ -1,8 +1,9 @@
 //SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
-import "@openzeppelin-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {ERC20Upgradeable} from "@openzeppelin-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {LibMulticaller} from "@multicaller/LibMulticaller.sol";
 import {IUniswapV2Router02} from "src/interfaces/IUniswapV2RouterV2.sol";
 import {ICrateV1} from "src/interfaces/ICrateV1.sol";
 
@@ -70,6 +71,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, ICrateV1 {
             _amount = tokensInCurve;
         }
 
+        address sender = LibMulticaller.sender();
         uint256 totalPayment;
         uint256 crateFee;
         uint256 artistFee;
@@ -103,10 +105,10 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, ICrateV1 {
         artistFees += artistFee;
         if (msg.value < totalPayment) revert InsufficientPayment();
         
-        _transfer(address(this), msg.sender, _amount);
-        emit TokenTrade(msg.sender, _amount, true, totalPayment);
+        _transfer(address(this), sender, _amount);
+        emit TokenTrade(sender, _amount, true, totalPayment);
 
-        (bool refundSuccess,) = (msg.sender).call{value: msg.value - totalPayment}("");
+        (bool refundSuccess,) = (sender).call{value: msg.value - totalPayment}("");
         if (!refundSuccess) revert TransferFailed();
 
         (bool crateFeePaid,) = protocolFeeDestination.call{value: crateFee}("");
@@ -120,8 +122,10 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, ICrateV1 {
     }
 
     function sell(uint256 _amount, uint256 minEtherReceivable) external nonReentrant {
+        address sender = LibMulticaller.sender();
+
         if (phase != Phase.BONDING_CURVE) revert WrongPhase();
-        if (balanceOf(msg.sender) < _amount) revert InsufficientTokens();
+        if (balanceOf(sender) < _amount) revert InsufficientTokens();
         if (_amount < 10 ** decimals()) revert MustSellAtLeastOneToken();
 
         /// @dev cache to use below for transfer
@@ -139,10 +143,10 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, ICrateV1 {
         if (netSellerProceeds < minEtherReceivable) revert SlippageToleranceExceeded();
 
         tokensInCurve += amount;
-        _transfer(msg.sender, address(this), amount);
-        emit TokenTrade(msg.sender, amount, false, netSellerProceeds);
+        _transfer(sender, address(this), amount);
+        emit TokenTrade(sender, amount, false, netSellerProceeds);
 
-        (bool netProceedsSent,) = (msg.sender).call{value: netSellerProceeds}("");
+        (bool netProceedsSent,) = (sender).call{value: netSellerProceeds}("");
         if (!netProceedsSent) revert TransferFailed();
 
         (bool crateFeePaid,) = protocolFeeDestination.call{value: crateFee}("");
@@ -150,7 +154,8 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, ICrateV1 {
     }
 
     function withdrawArtistFees() public nonReentrant {
-        if (msg.sender != artistFeeDestination) revert OnlyArtist();
+        address sender = LibMulticaller.sender();
+        if (sender != artistFeeDestination) revert OnlyArtist();
         if (artistFees == 0) revert Zero();
         uint256 fees = artistFees;
         artistFees = 0;
@@ -216,5 +221,11 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, ICrateV1 {
         (bool protocolFeePaid,) = protocolFeeDestination.call{value: 0.3 ether}("");
         if (!protocolFeePaid) revert TransferFailed();
         emit LiquidityAdded(amountToken, amountETH, liquidity);
+    }
+
+    function _update(address from, address to, uint256 value) internal override {
+        // only allow general transfers in market phase
+        if (from != address(this) && to != address(this) && (phase != Phase.MARKET)) revert WrongPhase();
+        super._update(from, to, value);
     }
 }
