@@ -16,6 +16,7 @@ interface ICrateV1 {
     }
 
     event TokenTrade(address trader, uint256 tokenAmount, bool isPurchase, uint256 ethAmount);
+    event CrowdfundEnded();
     event BondingCurveEnded();
     event ArtistFeesWithdrawn(address artist, uint256 amount);
     event LiquidityAdded(uint256 amountToken, uint256 amountETH, uint256 liquidity);

@@ -81,6 +81,7 @@ contract CrateTokenV1 is ERC20Upgradeable, ReentrancyGuard, ICrateV1 {
         if (phase == Phase.CROWDFUND) {
             if (tokensInCurve - _amount < CROWDFUND_THRESHOLD) {
                 phase = Phase.BONDING_CURVE;
+                emit CrowdfundEnded();
                 uint256 excess = CROWDFUND_THRESHOLD - (tokensInCurve - _amount);
                 uint256 crowdfundAmount = _amount - excess;
                 uint256 crowdfundPrice = getBuyPrice(crowdfundAmount);
