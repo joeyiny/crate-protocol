@@ -1,26 +1,25 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
-import "./CrateTokenV1.sol";
-import "@openzeppelin/contracts/access/Ownable2Step.sol";
-import "@openzeppelin/contracts/proxy/Clones.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "../lib/multicaller/src/LibMulticaller.sol";
+import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {LibMulticaller} from "@multicaller/LibMulticaller.sol";
+import {CrateFactoryV2} from "src/CrateFactoryV2.sol";
+import {CrateTokenV2} from "src/CrateTokenV2.sol";
+import {ICrateV2} from "src/interfaces/ICrateV2.sol";
 
-contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard {
-    event TokenLaunched(address tokenAddress, string name, string symbol);
-    event LaunchCostUpdated(uint256 newCost);
-
-    address[] public allTokens;
-
+contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
+    address public immutable uniswapV2Router02;
     address immutable tokenImplementation;
 
-    address public immutable uniswapV2Router02;
-    uint256 public launchCost = 0.00125 ether;
+    address[] public allTokens;
+    uint256 public launchCost;
 
     constructor(address _uniswapV2Router) Ownable(msg.sender) {
+        launchCost = 0.00125 ether;
         uniswapV2Router02 = _uniswapV2Router;
-        tokenImplementation = address(new CrateTokenV1());
+        tokenImplementation = address(new CrateTokenV2());
     }
 
     function createToken(string memory name, string memory symbol, string memory songURI, bytes32 salt)
@@ -30,14 +29,12 @@ contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard {
         returns (address)
     {
         address sender = LibMulticaller.sender();
-
-        require(msg.value == launchCost, "Did not send correct launch cost.");
+        if (msg.value < launchCost) revert InsufficientPayment();
         address clone = Clones.cloneDeterministic(tokenImplementation, _saltedSalt(sender, salt));
-        CrateTokenV1 newToken = CrateTokenV1(clone);
+        CrateTokenV2 newToken = CrateTokenV2(clone);
         allTokens.push(address(newToken));
         emit TokenLaunched(address(newToken), name, symbol);
         newToken.initialize(uniswapV2Router02, name, symbol, address(this), sender, songURI);
-
         return address(newToken);
     }
 
@@ -62,7 +59,7 @@ contract CrateFactoryV1 is Ownable2Step, ReentrancyGuard {
 
     function withdraw() public onlyOwner {
         (bool sent,) = owner().call{value: address(this).balance}("");
-        require(sent, "Failed to send Ether");
+        if (!sent) revert TransferFailed();
     }
 
     receive() external payable {}

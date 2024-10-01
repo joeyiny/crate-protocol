@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "forge-std/Vm.sol";
-import "forge-std/console.sol";
-import "ds-test/test.sol";
-import "../src/CrateFactoryV1.sol";
+import {TestUtils} from "test/utils/TestUtils.sol";
+import {CrateFactoryV2} from "src/CrateFactoryV2.sol";
+import {CrateTokenV2} from "src/CrateTokenV2.sol";
+import {ICrateV2} from "src/interfaces/ICrateV2.sol";
 
-contract CrateFactoryV1Test is DSTest {
-    CrateFactoryV1 factory;
+contract CrateFactoryV2Test is TestUtils, ICrateV2 {
+    CrateFactoryV2 factory;
     address uniswapRouter = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
     address tester;
 
     function setUp() public {
         // Set up the environment before each test
         tester = address(this);
-        factory = new CrateFactoryV1(uniswapRouter);
+        factory = new CrateFactoryV2(uniswapRouter);
     }
 
     function testCreateToken() public {
@@ -29,8 +29,8 @@ contract CrateFactoryV1Test is DSTest {
         assertTrue(tokenAddress != address(0), "Token creation failed.");
         assertEq(factory.allTokens(0), tokenAddress, "Token address should be recorded in allTokens.");
 
-        // Check token details (assuming public view functions in CrateTokenV1 for this)
-        CrateTokenV1 token = CrateTokenV1(tokenAddress);
+        // Check token details (assuming public view functions in CrateTokenV2 for this)
+        CrateTokenV2 token = CrateTokenV2(tokenAddress);
         assertEq(token.name(), name, "Token name should match.");
         assertEq(token.symbol(), symbol, "Token symbol should match.");
         assertEq(token.songURI(), songURI, "Song URI should match.");
@@ -60,16 +60,6 @@ contract CrateFactoryV1Test is DSTest {
         factory.createToken{value: 0.0001 ether}(name, symbol, songURI, salt); // Not enough ETH
     }
 
-    function testFailCreateTokenWithTooMuchEth() public {
-        // Attempt to create a token without sending enough ETH should fail
-        string memory name = "FailToken";
-        string memory symbol = "FTK";
-        string memory songURI = "example.com";
-        bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
-
-        factory.createToken{value: 0.1 ether}(name, symbol, songURI, salt); // Not enough ETH
-    }
-
     function testUpdateLaunchCostAndCreateToken() public {
         // First, update the launch cost by the owner
         uint256 newLaunchCost = 0.5 ether; // Updated launch cost
@@ -79,7 +69,7 @@ contract CrateFactoryV1Test is DSTest {
         // Initial balance of the tester
         uint256 initialBalance = address(this).balance;
 
-        uint256 sentAmount = factory.launchCost();
+        //uint256 sentAmount = factory.launchCost();
 
         // Creating a token and sending more ETH than required
         string memory name = "ExcessToken";
@@ -109,8 +99,8 @@ contract CrateFactoryV1Test is DSTest {
         assertTrue(firstClone != address(0), "First token creation failed");
 
         // Second token creation with the same salt should fail
-        address secondClone = address(factory.createToken{value: factory.launchCost()}(name, symbol, songURI, salt));
+        factory.createToken{value: factory.launchCost()}(name, symbol, songURI, salt);
     }
 
-    receive() external payable {} // Allow this contract to receive ETH
+    receive() external payable {}
 }
