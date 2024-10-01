@@ -67,8 +67,8 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         buyAmount = bound(buyAmount, 20_001e18, 79_000e18);
         /// Purchase out the crowdfund
         token.buy{value: 1000 ether}(buyAmount);
-        token.sell(token.balanceOf(bob), 0);
-        assertEq(token.balanceOf(bob), 0);
+        token.sell(token.balanceOf(bob) - 20_000e18, 0);
+        assertEq(token.balanceOf(bob), 20_000e18);
     }
 
     function testfuzz_Sell_BondingCurve_Two(uint256 buyAmount) public prank(bob) {
@@ -77,8 +77,21 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         token.buy{value: 100 ether}(buyAmount);
         uint256 buyAmountTwo = 10_000e18;
         token.buy{value: 100 ether}(buyAmountTwo);
-        token.sell(token.balanceOf(bob), 0);
-        assertEq(token.balanceOf(bob), 0);
+        token.sell(token.balanceOf(bob) - 20_000e18, 0);
+        assertEq(token.balanceOf(bob), 20_000e18);
+        assertEq(token.crowdfund(bob), 20_000e18);
+    }
+
+    function testfuzz_Sell_BondingCurve_Three(uint256 buyAmount) public prank(bob) {
+        buyAmount = bound(buyAmount, 20_001e18, 79_000e18);
+        /// Purchase out the crowdfund
+        token.buy{value: 1000 ether}(buyAmount);
+        /// Unable to sell crowdfund tokens
+        vm.expectRevert(InsufficientTokens.selector);
+        token.sell(buyAmount, 0);
+        /// Unable to transfer tokens also
+        vm.expectRevert(WrongPhase.selector);
+        token.transfer(alice, buyAmount);
     }
 
     function testfuzz_Sell_Crowdfund(uint256 buyAmount) public prank(bob) {
@@ -87,5 +100,6 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         uint256 amountToSell = token.balanceOf(bob);
         vm.expectRevert(WrongPhase.selector);
         token.sell(amountToSell, 0);
+        assertEq(token.crowdfund(bob), buyAmount);
     }
 }

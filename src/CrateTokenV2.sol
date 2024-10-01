@@ -24,6 +24,8 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     uint256 public tokensInCurve;
     uint256 public artistFees;
 
+    mapping(address => uint256) public crowdfund;
+
     string public songURI;
 
     Phase public phase;
@@ -81,9 +83,12 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         if (phase == Phase.CROWDFUND) {
             if (tokensInCurve - _amount < CROWDFUND_THRESHOLD) {
                 phase = Phase.BONDING_CURVE;
+                emit CrowdfundEnded();
                 uint256 excess = CROWDFUND_THRESHOLD - (tokensInCurve - _amount);
-                uint256 crowdfundPrice = getBuyPrice(_amount - excess);
-                tokensInCurve -= (_amount - excess);
+                uint256 crowdfundAmount = _amount - excess;
+                uint256 crowdfundPrice = getBuyPrice(crowdfundAmount);
+                tokensInCurve -= crowdfundAmount;
+                crowdfund[sender] += crowdfundAmount;
                 uint256 bondingCurvePrice = getBuyPrice(excess);
                 tokensInCurve -= excess;
                 crateFee = (crowdfundPrice / 10) + (bondingCurvePrice * CRATE_FEE_PERCENT) / 1 ether;
@@ -92,6 +97,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
             } else {
                 uint256 price = getBuyPrice(_amount);
                 tokensInCurve -= _amount;
+                crowdfund[sender] += _amount;
                 crateFee = (price / 10);
                 artistFee = ((price * 9) / 10);
                 totalPayment = crateFee + artistFee;
@@ -129,15 +135,8 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         address sender = LibMulticaller.sender();
 
         if (phase != Phase.BONDING_CURVE) revert WrongPhase();
-        if (balanceOf(sender) < _amount) revert InsufficientTokens();
+        if (balanceOf(sender) < _amount + crowdfund[sender]) revert InsufficientTokens();
         if (_amount < 10 ** decimals()) revert MustSellAtLeastOneToken();
-
-        /// @dev cache to use below for transfer
-        uint256 amount = _amount;
-        if (tokensInCurve + _amount >= CROWDFUND_THRESHOLD) {
-            phase = Phase.CROWDFUND;
-            _amount -= (tokensInCurve + _amount - CROWDFUND_THRESHOLD);
-        }
 
         uint256 price = getSellPrice(_amount);
         uint256 crateFee = (price * CRATE_FEE_PERCENT) / 1 ether;
@@ -148,9 +147,9 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
             revert SlippageToleranceExceeded();
         }
 
-        tokensInCurve += amount;
-        _transfer(sender, address(this), amount);
-        emit TokenTrade(sender, amount, false, netSellerProceeds);
+        tokensInCurve += _amount;
+        _transfer(sender, address(this), _amount);
+        emit TokenTrade(sender, _amount, false, netSellerProceeds);
 
         (bool netProceedsSent,) = (sender).call{value: netSellerProceeds}("");
         if (!netProceedsSent) revert TransferFailed();
