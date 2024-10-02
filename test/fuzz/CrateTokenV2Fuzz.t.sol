@@ -5,26 +5,27 @@ import {TestUtils} from "test/utils/TestUtils.sol";
 import {CrateFactoryV2} from "src/CrateFactoryV2.sol";
 import {CrateTokenV2} from "src/CrateTokenV2.sol";
 import {ICrateV2} from "src/interfaces/ICrateV2.sol";
+import {IUniswapV2Router02} from "src/interfaces/IUniswapV2RouterV2.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {MockUSDC, MockUniswapV2Router} from "test/utils/Mocks.sol";
 
-/// @dev forge test --match-contract CrateTokenV2Test -vvv
-contract CrateTokenV2Test is TestUtils, ICrateV2 {
-    CrateFactoryV2 factory;
-    CrateTokenV2 token;
-    address uniswapRouter = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24; //Router on Base
-
-    address owner = address(0x420);
-    address alice = address(0x123);
-    address bob = address(0x456);
+/// @dev forge test --match-contract CrateTokenV2TestFuzz -vvv
+contract CrateTokenV2TestFuzz is TestUtils, ICrateV2 {
     address protocolFeeAddress = address(0x789);
     address artistAddress = address(0xabc);
 
-    function setUp() public {
-        vm.deal(owner, 1000 ether);
-        vm.deal(alice, 1000 ether);
-        vm.deal(bob, 1000 ether);
+    function setUp() public override {
+        super.setUp();
+
+        usdc = new MockUSDC();
+        uniswapRouter = new MockUniswapV2Router();
+
+        MockUSDC(address(usdc)).mint(alice, 1_000_000_000e6);
+        MockUSDC(address(usdc)).mint(bob, 1_000_000_000e6);
+        MockUSDC(address(usdc)).mint(owner, 1_000_000_000e6);
 
         vm.startPrank(owner);
-        factory = new CrateFactoryV2(uniswapRouter);
+        factory = new CrateFactoryV2(address(uniswapRouter), address(usdc));
         string memory name = "TestToken";
         string memory symbol = "TTK";
         string memory songURI = "example.com";
@@ -51,41 +52,39 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         assertEq(token2.totalSupply(), 117_000 * 1e18);
     }
 
-    function testFuzz_BuyWithEth(uint256 ethAmount) public prank(alice) {
-        ethAmount = bound(ethAmount, 0.001 ether, 4 ether);
-        token.buyWithEth{value: ethAmount}(0);
-        assertGt(token.balanceOf(alice), 0);
-    }
-
     function testFuzz_Buy(uint256 tokenAmount) public prank(bob) {
         tokenAmount = bound(tokenAmount, 1e18, 1e21);
-        token.buy{value: 1000 ether}(tokenAmount);
+        usdc.approve(address(token), ~uint256(0));
+        token.buy(tokenAmount);
         assertTrue(token.balanceOf(bob) == tokenAmount);
     }
 
-    function testfuzz_Sell_BondingCurve_One(uint256 buyAmount) public prank(bob) {
+    function testFuzz_Sell_BondingCurve_One(uint256 buyAmount) public prank(bob) {
         buyAmount = bound(buyAmount, 20_001e18, 79_000e18);
         /// Purchase out the crowdfund
-        token.buy{value: 1000 ether}(buyAmount);
+        usdc.approve(address(token), ~uint256(0));
+        token.buy(buyAmount);
         token.sell(token.balanceOf(bob) - 20_000e18, 0);
         assertEq(token.balanceOf(bob), 20_000e18);
     }
 
-    function testfuzz_Sell_BondingCurve_Two(uint256 buyAmount) public prank(bob) {
+    function testFuzz_Sell_BondingCurve_Two(uint256 buyAmount) public prank(bob) {
         buyAmount = bound(buyAmount, 20_001e18, 69_000e18);
         /// Purchase out the crowdfund
-        token.buy{value: 100 ether}(buyAmount);
+        usdc.approve(address(token), ~uint256(0));
+        token.buy(buyAmount);
         uint256 buyAmountTwo = 10_000e18;
-        token.buy{value: 100 ether}(buyAmountTwo);
+        token.buy(buyAmountTwo);
         token.sell(token.balanceOf(bob) - 20_000e18, 0);
         assertEq(token.balanceOf(bob), 20_000e18);
         assertEq(token.crowdfund(bob), 20_000e18);
     }
 
-    function testfuzz_Sell_BondingCurve_Three(uint256 buyAmount) public prank(bob) {
+    function testFuzz_Sell_BondingCurve_Three(uint256 buyAmount) public prank(bob) {
         buyAmount = bound(buyAmount, 20_001e18, 79_000e18);
         /// Purchase out the crowdfund
-        token.buy{value: 1000 ether}(buyAmount);
+        usdc.approve(address(token), ~uint256(0));
+        token.buy(buyAmount);
         /// Unable to sell crowdfund tokens
         vm.expectRevert(InsufficientTokens.selector);
         token.sell(buyAmount, 0);
@@ -94,9 +93,10 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         token.transfer(alice, buyAmount);
     }
 
-    function testfuzz_Sell_Crowdfund(uint256 buyAmount) public prank(bob) {
+    function testFuzz_Sell_Crowdfund(uint256 buyAmount) public prank(bob) {
         buyAmount = bound(buyAmount, 1e18, 19_999e18);
-        token.buy{value: 1000 ether}(buyAmount);
+        usdc.approve(address(token), ~uint256(0));
+        token.buy(buyAmount);
         uint256 amountToSell = token.balanceOf(bob);
         vm.expectRevert(WrongPhase.selector);
         token.sell(amountToSell, 0);
