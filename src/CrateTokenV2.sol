@@ -202,19 +202,15 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         return lower;
     }
 
-    function getBuyPrice(uint256 amount) public view returns (uint256) {
-        // Adjusted to output in USDC's 6 decimals
-        uint256 price = getPrice(MAX_CURVE_SUPPLY - tokensInCurve, amount);
-        return price / 1e12;
+    function getBuyPrice(uint256 amount) public view returns (uint256 price) {
+        price = getPrice(MAX_CURVE_SUPPLY - tokensInCurve, amount);
     }
 
-    function getSellPrice(uint256 amount) public view returns (uint256) {
-        // Adjusted to output in USDC's 6 decimals
-        uint256 price = getPrice(
+    function getSellPrice(uint256 amount) public view returns (uint256 price) {
+        price = getPrice(
             MAX_CURVE_SUPPLY - tokensInCurve - amount,
             amount
         );
-        return price / 1e12;
     }
 
     function getPrice(
@@ -225,8 +221,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     }
 
     function bondingCurve(uint256 x) public pure returns (uint256) {
-        // Adjusted constants for 6 decimals output
-        return (x * (x / 1e10 + 1)) / 16e10; // Adjusted denominator
+        return (x * (x / 1e10 + 1)) / 16e22;
     }
 
     /// INTERNAL ///
@@ -238,7 +233,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         if (amountTokenDesired == 0 || amountUsdcDesired == 0) revert Zero();
 
         // Calculate the minimum amounts based on a fair price to prevent front-running
-        uint256 minTokenPrice = getPrice(MAX_CURVE_SUPPLY, 1e18) / 1e12; // Adjusted for USDC decimals
+        uint256 minTokenPrice = getPrice(MAX_CURVE_SUPPLY, 1e18);
         uint256 minTokens = (amountUsdcDesired * 1e18) / minTokenPrice; // Result in 18 decimals
 
         (

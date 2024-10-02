@@ -5,16 +5,16 @@ import {TestUtils} from "test/utils/TestUtils.sol";
 import {CrateFactoryV2} from "src/CrateFactoryV2.sol";
 import {CrateTokenV2} from "src/CrateTokenV2.sol";
 import {ICrateV2} from "src/interfaces/ICrateV2.sol";
+import {IUniswapV2Router02} from "src/interfaces/IUniswapV2RouterV2.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract CrateFactoryV2Test is TestUtils, ICrateV2 {
-    CrateFactoryV2 factory;
-    address uniswapRouter = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
-    address tester;
+contract CrateFactoryV2TestE2E is TestUtils, ICrateV2 {
+    address tester = makeAddr("tester");
 
-    function setUp() public {
-        // Set up the environment before each test
-        tester = address(this);
-        factory = new CrateFactoryV2(uniswapRouter);
+    function setUp() public override {
+        forkBase();
+        super.setUp();
+        factory = new CrateFactoryV2(address(uniswapRouter), address(usdc));
     }
 
     function testCreateToken() public {
@@ -50,13 +50,14 @@ contract CrateFactoryV2Test is TestUtils, ICrateV2 {
         }
     }
 
-    function testFailCreateTokenWithInsufficientEth() public {
+    function testCreateTokenWithInsufficientEth() public {
         // Attempt to create a token without sending enough ETH should fail
         string memory name = "FailToken";
         string memory symbol = "FTK";
         string memory songURI = "example.com";
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
 
+        vm.expectRevert();
         factory.createToken{value: 0.0001 ether}(name, symbol, songURI, salt); // Not enough ETH
     }
 
@@ -88,19 +89,20 @@ contract CrateFactoryV2Test is TestUtils, ICrateV2 {
         assertEq(finalBalance, expectedFinalBalance, "Excess ETH was not refunded correctly.");
     }
 
-    function testFailSameSalt() public {
+    function testSameSalt() public {
         string memory name = "UniqueToken";
         string memory symbol = "UNQ";
         string memory songURI = "unique.com";
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
 
+        uint256 launchCost = factory.launchCost();
+
         // First token creation should succeed
-        address firstClone = address(factory.createToken{value: factory.launchCost()}(name, symbol, songURI, salt));
+        address firstClone = address(factory.createToken{value: launchCost}(name, symbol, songURI, salt));
         assertTrue(firstClone != address(0), "First token creation failed");
 
         // Second token creation with the same salt should fail
-        factory.createToken{value: factory.launchCost()}(name, symbol, songURI, salt);
+        vm.expectRevert();
+        factory.createToken{value: launchCost}(name, symbol, songURI, salt);
     }
-
-    receive() external payable {}
 }

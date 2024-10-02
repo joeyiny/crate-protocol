@@ -1,32 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {TestUtils} from "test/utils/TestUtils.sol";
+import {TestUtils, console} from "test/utils/TestUtils.sol";
 import {CrateFactoryV2} from "src/CrateFactoryV2.sol";
 import {CrateTokenV2} from "src/CrateTokenV2.sol";
 import {ICrateV2} from "src/interfaces/ICrateV2.sol";
+import {IUniswapV2Router02} from "src/interfaces/IUniswapV2RouterV2.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract CrateTokenV2Test is TestUtils, ICrateV2 {
-    CrateFactoryV2 factory;
-    CrateTokenV2 token;
-    address uniswapRouter = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24; //Router on Base
-
-    address owner = address(0x420);
-    address alice = address(0x123);
-    address bob = address(0x456);
+contract CrateTokenV2TestE2E is TestUtils, ICrateV2 {
     address protocolFeeAddress = address(0x789);
     address artistAddress = address(0xabc);
 
-    function setUp() public {
-        uint256 baseFork = vm.createFork("https://1rpc.io/base");
-        vm.selectFork(baseFork);
-
-        vm.deal(owner, 1000 ether);
-        vm.deal(alice, 1000 ether);
-        vm.deal(bob, 1000 ether);
+    function setUp() public override {
+        forkBase();
+        super.setUp();
 
         vm.startPrank(owner);
-        factory = new CrateFactoryV2(uniswapRouter);
+        factory = new CrateFactoryV2(address(uniswapRouter), address(usdc));
         string memory name = "TestToken";
         string memory symbol = "TTK";
         string memory songURI = "example.com";
@@ -37,8 +28,18 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
     }
 
     function testEndBondingCurveAndAddLiquidity() public prank(bob) {
-        token.buy{value: 8 ether}(80_000 * 1e18); // Buy out the curve
+        usdc.approve(address(token), ~uint256(0));
+        token.buy(80_000e18); // Buy out the curve
         assert(token.phase() == Phase.MARKET);
-        assertGt(address(token).balance, 0);
+        assertGt(usdc.balanceOf(address(token)), 0);
+    }
+
+    function testCostForOneToken() public prank(bob) {
+        usdc.approve(address(token), ~uint256(0));
+        uint256 costA = token.getBuyPrice(1e18);
+        console.log("Cost A: ", costA);
+        token.buy(79_999e18); 
+        uint256 costB = token.getBuyPrice(1e18);
+        console.log("Cost B: ", costB);
     }
 }
