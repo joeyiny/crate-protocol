@@ -67,6 +67,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         IERC20(usdc).approve(address(token), usdcAmount);
 
         assertTrue(IERC20(usdc).balanceOf(address(factory)) == 0, "factory contract should not have any usdc yet.");
+        assertTrue(token.balanceOf(bob) == 0, "user should not have earned tokens yet");
 
         token.fund(usdcAmount);
 
@@ -80,6 +81,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
             IERC20(usdc).balanceOf(address(artist)) == (usdcAmount - (usdcAmount / 10)),
             "artist should have received 90% usdc"
         );
+        assertTrue(token.balanceOf(bob) == (usdcAmount * 1e18) / (5 * 1e6), "user should have earned tokens");
     }
 
     function testFailFuzz_Donation(uint256 usdcAmount) public prank(bob) {
