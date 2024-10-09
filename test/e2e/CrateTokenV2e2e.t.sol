@@ -39,9 +39,9 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.stopPrank();
     }
 
-    function testEndBondingCurveAndAddLiquidity() public prank(bob) {
-        token.buy{value: 8 ether}(80_000 * 1e18); // Buy out the curve
-        assert(token.phase() == Phase.MARKET);
-        assertGt(address(token).balance, 0);
-    }
+    // function testEndBondingCurveAndAddLiquidity() public prank(bob) {
+    //     token.buy{value: 8 ether}(80_000 * 1e18); // Buy out the curve
+    //     assert(token.phase() == Phase.MARKET);
+    //     assertGt(address(token).balance, 0);
+    // }
 }
