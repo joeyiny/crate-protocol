@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
+
 import {TestUtils} from "test/utils/TestUtils.sol";
 import {CrateFactoryV2} from "src/CrateFactoryV2.sol";
 import {CrateTokenV2} from "src/CrateTokenV2.sol";
@@ -11,7 +13,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
     CrateFactoryV2 factory;
     CrateTokenV2 token;
     address uniswapRouter = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24; //Router on Base
-    address base = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; //USDC on Base
+    address usdc = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; //USDC on Base
 
     address owner = address(0x420);
     address alice = address(0x123);
@@ -23,9 +25,10 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.deal(owner, 1000 ether);
         vm.deal(alice, 1000 ether);
         vm.deal(bob, 1000 ether);
+        deal(usdc, bob, 1000 * 1e6);
 
         vm.startPrank(owner);
-        factory = new CrateFactoryV2(uniswapRouter, base);
+        factory = new CrateFactoryV2(uniswapRouter, usdc);
         string memory name = "TestToken";
         string memory symbol = "TTK";
         string memory songURI = "example.com";
@@ -65,6 +68,11 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         assertEq(token2.name(), name);
         assertEq(token2.symbol(), symbol);
         assertEq(token2.totalSupply(), 117_000 * 1e18);
+    }
+
+    function testUSDC() public prank(bob) {
+        uint256 initialUSDCBalance = IERC20(usdc).balanceOf(bob);
+        assertEq(initialUSDCBalance, 1000 * 1e6, "Initial USDC balance should be 1000 USDC");
     }
 
     function testFuzz_BuyWithEth(uint256 ethAmount) public prank(alice) {
