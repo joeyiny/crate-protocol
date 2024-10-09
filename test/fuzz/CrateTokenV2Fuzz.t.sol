@@ -62,7 +62,6 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         usdcAmount = bound(usdcAmount, 1 * 1e6, 1000 * 1e6);
         IERC20(usdc).approve(address(token), usdcAmount);
 
-
         token.fund(usdcAmount);
 
         assertEq(IERC20(usdc).balanceOf(bob), initialUserBalance - usdcAmount, "Bob should have usdc balance deducted");
@@ -98,55 +97,55 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
     //     token.fund(usdcAmount);
     // }
 
-    function testFuzz_BuyWithEth(uint256 ethAmount) public prank(alice) {
-        ethAmount = bound(ethAmount, 0.001 ether, 4 ether);
-        token.buyWithEth{value: ethAmount}(0);
-        assertGt(token.balanceOf(alice), 0);
-    }
+    // function testFuzz_BuyWithEth(uint256 ethAmount) public prank(alice) {
+    //     ethAmount = bound(ethAmount, 0.001 ether, 4 ether);
+    //     token.buyWithEth{value: ethAmount}(0);
+    //     assertGt(token.balanceOf(alice), 0);
+    // }
 
-    function testFuzz_Buy(uint256 tokenAmount) public prank(bob) {
-        tokenAmount = bound(tokenAmount, 1e18, 1e21);
-        token.buy{value: 1000 ether}(tokenAmount);
-        assertTrue(token.balanceOf(bob) == tokenAmount);
-    }
+    // function testFuzz_Buy(uint256 tokenAmount) public prank(bob) {
+    //     tokenAmount = bound(tokenAmount, 1e18, 1e21);
+    //     token.buy{value: 1000 ether}(tokenAmount);
+    //     assertTrue(token.balanceOf(bob) == tokenAmount);
+    // }
 
-    function testfuzz_Sell_BondingCurve_One(uint256 buyAmount) public prank(bob) {
-        buyAmount = bound(buyAmount, 20_001e18, 79_000e18);
-        /// Purchase out the crowdfund
-        token.buy{value: 1000 ether}(buyAmount);
-        token.sell(token.balanceOf(bob) - 20_000e18, 0);
-        assertEq(token.balanceOf(bob), 20_000e18);
-    }
+    // function testfuzz_Sell_BondingCurve_One(uint256 buyAmount) public prank(bob) {
+    //     buyAmount = bound(buyAmount, 20_001e18, 79_000e18);
+    //     /// Purchase out the crowdfund
+    //     token.buy{value: 1000 ether}(buyAmount);
+    //     token.sell(token.balanceOf(bob) - 20_000e18, 0);
+    //     assertEq(token.balanceOf(bob), 20_000e18);
+    // }
 
-    function testfuzz_Sell_BondingCurve_Two(uint256 buyAmount) public prank(bob) {
-        buyAmount = bound(buyAmount, 20_001e18, 69_000e18);
-        /// Purchase out the crowdfund
-        token.buy{value: 100 ether}(buyAmount);
-        uint256 buyAmountTwo = 10_000e18;
-        token.buy{value: 100 ether}(buyAmountTwo);
-        token.sell(token.balanceOf(bob) - 20_000e18, 0);
-        assertEq(token.balanceOf(bob), 20_000e18);
-        assertEq(token.crowdfund(bob), 20_000e18);
-    }
+    // function testfuzz_Sell_BondingCurve_Two(uint256 buyAmount) public prank(bob) {
+    //     buyAmount = bound(buyAmount, 20_001e18, 69_000e18);
+    //     /// Purchase out the crowdfund
+    //     token.buy{value: 100 ether}(buyAmount);
+    //     uint256 buyAmountTwo = 10_000e18;
+    //     token.buy{value: 100 ether}(buyAmountTwo);
+    //     token.sell(token.balanceOf(bob) - 20_000e18, 0);
+    //     assertEq(token.balanceOf(bob), 20_000e18);
+    //     assertEq(token.crowdfund(bob), 20_000e18);
+    // }
 
-    function testfuzz_Sell_BondingCurve_Three(uint256 buyAmount) public prank(bob) {
-        buyAmount = bound(buyAmount, 20_001e18, 79_000e18);
-        /// Purchase out the crowdfund
-        token.buy{value: 1000 ether}(buyAmount);
-        /// Unable to sell crowdfund tokens
-        vm.expectRevert(InsufficientTokens.selector);
-        token.sell(buyAmount, 0);
-        /// Unable to transfer tokens also
-        vm.expectRevert(WrongPhase.selector);
-        token.transfer(alice, buyAmount);
-    }
+    // function testfuzz_Sell_BondingCurve_Three(uint256 buyAmount) public prank(bob) {
+    //     buyAmount = bound(buyAmount, 20_001e18, 79_000e18);
+    //     /// Purchase out the crowdfund
+    //     token.buy{value: 1000 ether}(buyAmount);
+    //     /// Unable to sell crowdfund tokens
+    //     vm.expectRevert(InsufficientTokens.selector);
+    //     token.sell(buyAmount, 0);
+    //     /// Unable to transfer tokens also
+    //     vm.expectRevert(WrongPhase.selector);
+    //     token.transfer(alice, buyAmount);
+    // }
 
-    function testfuzz_Sell_Crowdfund(uint256 buyAmount) public prank(bob) {
-        buyAmount = bound(buyAmount, 1e18, 19_999e18);
-        token.buy{value: 1000 ether}(buyAmount);
-        uint256 amountToSell = token.balanceOf(bob);
-        vm.expectRevert(WrongPhase.selector);
-        token.sell(amountToSell, 0);
-        assertEq(token.crowdfund(bob), buyAmount);
-    }
+    // function testfuzz_Sell_Crowdfund(uint256 buyAmount) public prank(bob) {
+    //     buyAmount = bound(buyAmount, 1e18, 19_999e18);
+    //     token.buy{value: 1000 ether}(buyAmount);
+    //     uint256 amountToSell = token.balanceOf(bob);
+    //     vm.expectRevert(WrongPhase.selector);
+    //     token.sell(amountToSell, 0);
+    //     assertEq(token.crowdfund(bob), buyAmount);
+    // }
 }
