@@ -6,6 +6,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {LibMulticaller} from "@multicaller/LibMulticaller.sol";
 import {IUniswapV2Router02} from "src/interfaces/IUniswapV2RouterV2.sol";
 import {ICrateV2} from "src/interfaces/ICrateV2.sol";
+import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 // The total supply is 117,000 tokens
 // Once the bonding curve has sold out 80,000 tokens, the other 37,000 are put in Uniswap with the total ETH in the contract.
@@ -57,6 +58,18 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     }
 
     /// PUBLIC ///
+
+    function fund(uint256 _amount) public nonReentrant {
+        require(_amount > 0, "Amount must be greater than zero");
+        address sender = LibMulticaller.sender();
+
+        // User must approve the contract to transfer USDC on their behalf
+        require(IERC20(usdcToken).allowance(sender, address(this)) >= _amount, "USDC allowance too low");
+
+        // Transfer USDC from sender to this contract
+        bool success = IERC20(usdcToken).transferFrom(sender, address(this), _amount);
+        require(success, "USDC transfer failed");
+    }
 
     function buyWithEth(uint256 minTokensReceivable) external payable {
         uint256 preFee =

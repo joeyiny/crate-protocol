@@ -60,6 +60,13 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         assertEq(initialUSDCBalance, 1000 * 1e6, "Initial USDC balance should be 1000 USDC");
     }
 
+    function testDonation() public prank(bob) {
+        IERC20(usdc).approve(address(token), 100 * 1e6);
+        token.fund(100 * 1e6);
+        assertEq(IERC20(usdc).balanceOf(bob), 900 * 1e6, "bob should have $900");
+        assertEq(IERC20(usdc).balanceOf(address(token)), 100 * 1e6, "token contract should have $100");
+    }
+
     function testFuzz_BuyWithEth(uint256 ethAmount) public prank(alice) {
         ethAmount = bound(ethAmount, 0.001 ether, 4 ether);
         token.buyWithEth{value: ethAmount}(0);
