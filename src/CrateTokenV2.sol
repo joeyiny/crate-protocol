@@ -68,6 +68,14 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         // Transfer USDC from sender to this contract
         bool success = IERC20(usdcToken).transferFrom(sender, address(this), _usdcAmount);
         require(success, "USDC transfer failed");
+
+        // Calculate fees
+        uint256 crateFee = (_usdcAmount * 10) / 100;
+        uint256 artistFee = _usdcAmount - crateFee;
+
+        // TODO: Switch pattern to accumulate/withdraw
+        require(IERC20(usdcToken).transfer(protocolFeeDestination, crateFee), "Crate fee transfer failed");
+        require(IERC20(usdcToken).transfer(artistFeeDestination, artistFee), "Artist fee transfer failed");
     }
 
     function buyWithEth(uint256 minTokensReceivable) external payable {

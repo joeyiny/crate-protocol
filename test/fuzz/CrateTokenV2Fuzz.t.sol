@@ -4,30 +4,32 @@ pragma solidity ^0.8.24;
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 import {TestUtils} from "test/utils/TestUtils.sol";
+import {MockUSDC} from "test/mock/MockUSDC.sol";
 import {CrateFactoryV2} from "src/CrateFactoryV2.sol";
 import {CrateTokenV2} from "src/CrateTokenV2.sol";
 import {ICrateV2} from "src/interfaces/ICrateV2.sol";
+import {console} from "forge-std/console.sol";
 
 /// @dev forge test --match-contract CrateTokenV2Test -vvv
 contract CrateTokenV2Test is TestUtils, ICrateV2 {
     CrateFactoryV2 factory;
     CrateTokenV2 token;
     address uniswapRouter = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24; //Router on Base
-    address usdc = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; //USDC on Base
-
-    address owner = address(0x420);
+    // address usdc = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; //USDC on Base
+    address usdc = address(new MockUSDC());
+    address artist = address(0x420);
     address alice = address(0x123);
     address bob = address(0x456);
-    address protocolFeeAddress = address(0x789);
+    // address protocolFeeAddress = address(0x789);
     address artistAddress = address(0xabc);
 
     function setUp() public {
-        vm.deal(owner, 1000 ether);
+        vm.deal(artist, 1000 ether);
         vm.deal(alice, 1000 ether);
         vm.deal(bob, 1000 ether);
         deal(usdc, bob, 1000 * 1e6);
 
-        vm.startPrank(owner);
+        vm.startPrank(artist);
         factory = new CrateFactoryV2(uniswapRouter, usdc);
         string memory name = "TestToken";
         string memory symbol = "TTK";
@@ -63,9 +65,21 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
     function testFuzz_Donation(uint256 usdcAmount) public prank(bob) {
         usdcAmount = bound(usdcAmount, 1 * 1e6, 1000 * 1e6);
         IERC20(usdc).approve(address(token), usdcAmount);
+
+        assertTrue(IERC20(usdc).balanceOf(address(factory)) == 0, "factory contract should not have any usdc yet.");
+
         token.fund(usdcAmount);
+
         assertEq(IERC20(usdc).balanceOf(bob), 1000 * 1e6 - usdcAmount, "bob should have usdc balance deducted");
-        assertEq(IERC20(usdc).balanceOf(address(token)), usdcAmount, "token contract should have correct uscd");
+        assertEq(IERC20(usdc).balanceOf(address(token)), 0, "token contract should have not have any usdc");
+        assertTrue(
+            IERC20(usdc).balanceOf(address(factory)) == (usdcAmount / 10),
+            "protocol fee address should have earned 10% usdc"
+        );
+        assertTrue(
+            IERC20(usdc).balanceOf(address(artist)) == (usdcAmount - (usdcAmount / 10)),
+            "artist should have received 90% usdc"
+        );
     }
 
     function testFailFuzz_Donation(uint256 usdcAmount) public prank(bob) {
