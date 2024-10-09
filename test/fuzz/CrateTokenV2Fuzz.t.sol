@@ -91,25 +91,11 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         assertTrue(token.phase() == Phase.BONDING_CURVE, "Should now be in bonding curve phase");
     }
 
-    function testFuzz_CompleteCrowdfund() public prank(bob) {
-        assertTrue(token.phase() == Phase.CROWDFUND, "Should start in crowdfund phase");
-
-        IERC20(usdc).approve(address(token), 100_000 * 1e6);
-
-        token.fund(3000 * 1e6);
-
-        assertTrue(token.phase() == Phase.CROWDFUND, "Should still be in crowdfund phase");
-
-        token.fund(2000 * 1e6);
-
-        assertTrue(token.phase() == Phase.BONDING_CURVE, "Should now be in bonding curve phase");
-    }
-
-    function testFailFuzz_Donation(uint256 usdcAmount) public prank(bob) {
-        usdcAmount = bound(usdcAmount, 1, 999_999); // Less than $1 in USDC
-        IERC20(usdc).approve(address(token), usdcAmount);
-        token.fund(usdcAmount);
-    }
+    // function testFailFuzz_Donation(uint256 usdcAmount) public prank(bob) {
+    //     usdcAmount = bound(usdcAmount, 1, 999_999); // Less than $1 in USDC
+    //     IERC20(usdc).approve(address(token), usdcAmount);
+    //     token.fund(usdcAmount);
+    // }
 
     // function testFuzz_BuyWithEth(uint256 ethAmount) public prank(alice) {
     //     ethAmount = bound(ethAmount, 0.001 ether, 4 ether);

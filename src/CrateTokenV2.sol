@@ -63,7 +63,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     /// PUBLIC ///
 
     function fund(uint256 _usdcAmount) public nonReentrant {
-        require(_usdcAmount >= 1 * 1e6, "Cannot pay less than $1");
+        // require(_usdcAmount >= 1 * 1e6, "Cannot pay less than $1");
         if (phase != Phase.CROWDFUND) revert WrongPhase();
 
         // Update phase
