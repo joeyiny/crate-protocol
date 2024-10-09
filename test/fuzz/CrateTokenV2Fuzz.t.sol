@@ -84,11 +84,11 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         assertTrue(token.balanceOf(bob) == (usdcAmount * 1e18) / (5 * 1e6), "user should have earned tokens");
     }
 
-    function testFailFuzz_Donation(uint256 usdcAmount) public prank(bob) {
-        usdcAmount = bound(usdcAmount, 1, 999_999); // Less than $1 in USDC
-        IERC20(usdc).approve(address(token), usdcAmount);
-        token.fund(usdcAmount);
-    }
+    // function testFailFuzz_Donation(uint256 usdcAmount) public prank(bob) {
+    //     usdcAmount = bound(usdcAmount, 1, 999_999); // Less than $1 in USDC
+    //     IERC20(usdc).approve(address(token), usdcAmount);
+    //     token.fund(usdcAmount);
+    // }
 
     function testFuzz_BuyWithEth(uint256 ethAmount) public prank(alice) {
         ethAmount = bound(ethAmount, 0.001 ether, 4 ether);

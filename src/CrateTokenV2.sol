@@ -61,6 +61,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
 
     function fund(uint256 _usdcAmount) public nonReentrant {
         require(_usdcAmount >= 1 * 1e6, "Cannot pay less than $1");
+        // require(_usdcAmount >= 1 * 1e6, "Cannot pay less than $1");
         address sender = LibMulticaller.sender();
         // User must approve the contract to transfer USDC on their behalf
         require(IERC20(usdcToken).allowance(sender, address(this)) >= _usdcAmount, "USDC allowance too low");
