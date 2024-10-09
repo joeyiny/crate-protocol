@@ -55,16 +55,23 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         assertEq(token2.totalSupply(), 117_000 * 1e18);
     }
 
-    function testUSDC() public prank(bob) {
+    function testFuzz_USDC() public prank(bob) {
         uint256 initialUSDCBalance = IERC20(usdc).balanceOf(bob);
         assertEq(initialUSDCBalance, 1000 * 1e6, "Initial USDC balance should be 1000 USDC");
     }
 
-    function testDonation() public prank(bob) {
-        IERC20(usdc).approve(address(token), 100 * 1e6);
-        token.fund(100 * 1e6);
-        assertEq(IERC20(usdc).balanceOf(bob), 900 * 1e6, "bob should have $900");
-        assertEq(IERC20(usdc).balanceOf(address(token)), 100 * 1e6, "token contract should have $100");
+    function testFuzz_Donation(uint256 usdcAmount) public prank(bob) {
+        usdcAmount = bound(usdcAmount, 1 * 1e6, 1000 * 1e6);
+        IERC20(usdc).approve(address(token), usdcAmount);
+        token.fund(usdcAmount);
+        assertEq(IERC20(usdc).balanceOf(bob), 1000 * 1e6 - usdcAmount, "bob should have usdc balance deducted");
+        assertEq(IERC20(usdc).balanceOf(address(token)), usdcAmount, "token contract should have correct uscd");
+    }
+
+    function testFailFuzz_Donation(uint256 usdcAmount) public prank(bob) {
+        usdcAmount = bound(usdcAmount, 1, 999_999); // Less than $1 in USDC
+        IERC20(usdc).approve(address(token), usdcAmount);
+        token.fund(usdcAmount);
     }
 
     function testFuzz_BuyWithEth(uint256 ethAmount) public prank(alice) {
