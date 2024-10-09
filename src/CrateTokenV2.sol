@@ -18,6 +18,8 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     uint256 private constant CRATE_FEE_PERCENT = 5e15;
     uint256 private constant ARTIST_FEE_PERCENT = 5e15;
 
+    uint256 public constant CROWDFUND_GOAL = 5000 * 1e6;
+
     address public uniswapV2Router02;
     address public usdcToken;
     address public protocolFeeDestination;
@@ -25,6 +27,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
 
     uint256 public tokensInCurve;
     uint256 public artistFees;
+    uint256 public amountRaised;
 
     mapping(address => uint256) public crowdfund;
 
@@ -61,6 +64,16 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
 
     function fund(uint256 _usdcAmount) public nonReentrant {
         require(_usdcAmount >= 1 * 1e6, "Cannot pay less than $1");
+        if (phase != Phase.CROWDFUND) revert WrongPhase();
+
+        // Update phase
+        // TODO: Handle the excess going into the bonding curve
+        if (_usdcAmount + amountRaised >= CROWDFUND_GOAL) {
+            _usdcAmount = CROWDFUND_GOAL - amountRaised;
+            phase = Phase.BONDING_CURVE;
+        }
+
+        // require(_usdcAmount >= 1 * 1e6, "Cannot pay less than $1");
         address sender = LibMulticaller.sender();
         // User must approve the contract to transfer USDC on their behalf
         require(IERC20(usdcToken).allowance(sender, address(this)) >= _usdcAmount, "USDC allowance too low");
@@ -72,6 +85,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         // Calculate amount of tokens earned
         uint256 numTokens = calculateTokenAmount(_usdcAmount);
 
+        amountRaised += _usdcAmount;
         _transfer(address(this), sender, numTokens);
 
         // Calculate fees

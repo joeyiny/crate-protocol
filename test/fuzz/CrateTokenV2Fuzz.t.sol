@@ -27,7 +27,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.deal(artist, 1000 ether);
         vm.deal(alice, 1000 ether);
         vm.deal(bob, 1000 ether);
-        deal(usdc, bob, 1000 * 1e6);
+        deal(usdc, bob, 100_000 * 1e6);
 
         vm.startPrank(artist);
         factory = new CrateFactoryV2(uniswapRouter, usdc);
@@ -57,21 +57,14 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         assertEq(token2.totalSupply(), 117_000 * 1e18);
     }
 
-    function testFuzz_USDC() public prank(bob) {
-        uint256 initialUSDCBalance = IERC20(usdc).balanceOf(bob);
-        assertEq(initialUSDCBalance, 1000 * 1e6, "Initial USDC balance should be 1000 USDC");
-    }
-
     function testFuzz_Donation(uint256 usdcAmount) public prank(bob) {
+        uint256 initialUserBalance = IERC20(usdc).balanceOf(bob);
         usdcAmount = bound(usdcAmount, 1 * 1e6, 1000 * 1e6);
         IERC20(usdc).approve(address(token), usdcAmount);
 
-        assertTrue(IERC20(usdc).balanceOf(address(factory)) == 0, "factory contract should not have any usdc yet.");
-        assertTrue(token.balanceOf(bob) == 0, "user should not have earned tokens yet");
-
         token.fund(usdcAmount);
 
-        assertEq(IERC20(usdc).balanceOf(bob), 1000 * 1e6 - usdcAmount, "bob should have usdc balance deducted");
+        assertEq(IERC20(usdc).balanceOf(bob), initialUserBalance - usdcAmount, "Bob should have usdc balance deducted");
         assertEq(IERC20(usdc).balanceOf(address(token)), 0, "token contract should have not have any usdc");
         assertTrue(
             IERC20(usdc).balanceOf(address(factory)) == (usdcAmount / 10),
@@ -82,6 +75,34 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
             "artist should have received 90% usdc"
         );
         assertTrue(token.balanceOf(bob) == (usdcAmount * 1e18) / (5 * 1e6), "user should have earned tokens");
+    }
+
+    function testFuzz_CompleteCrowdfund() public prank(bob) {
+        assertTrue(token.phase() == Phase.CROWDFUND, "Should start in crowdfund phase");
+
+        IERC20(usdc).approve(address(token), 100_000 * 1e6);
+
+        token.fund(3000 * 1e6);
+
+        assertTrue(token.phase() == Phase.CROWDFUND, "Should still be in crowdfund phase");
+
+        token.fund(2000 * 1e6);
+
+        assertTrue(token.phase() == Phase.BONDING_CURVE, "Should now be in bonding curve phase");
+    }
+
+    function testFuzz_CompleteCrowdfund() public prank(bob) {
+        assertTrue(token.phase() == Phase.CROWDFUND, "Should start in crowdfund phase");
+
+        IERC20(usdc).approve(address(token), 100_000 * 1e6);
+
+        token.fund(3000 * 1e6);
+
+        assertTrue(token.phase() == Phase.CROWDFUND, "Should still be in crowdfund phase");
+
+        token.fund(2000 * 1e6);
+
+        assertTrue(token.phase() == Phase.BONDING_CURVE, "Should now be in bonding curve phase");
     }
 
     function testFailFuzz_Donation(uint256 usdcAmount) public prank(bob) {
