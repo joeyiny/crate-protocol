@@ -107,10 +107,6 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         return 5 * 1e6; //$5 per copy
     }
 
-    function buyWithEth(uint256 minTokensReceivable) external payable {
-        uint256 preFee =
-            (msg.value * (CRATE_FEE_PERCENT + ARTIST_FEE_PERCENT)) / (CRATE_FEE_PERCENT + ARTIST_FEE_PERCENT + 1 ether);
-        uint256 netValue = ((msg.value - preFee) * 999) / 1000;
         uint256 tokensToBuy = estimateMaxPurchase(netValue);
         if (tokensToBuy == 0) revert Zero();
         if (tokensToBuy < minTokensReceivable) {
