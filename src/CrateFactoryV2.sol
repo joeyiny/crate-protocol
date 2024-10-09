@@ -11,39 +11,63 @@ import {ICrateV2} from "src/interfaces/ICrateV2.sol";
 
 contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
     address public immutable uniswapV2Router02;
+    address public immutable usdcToken;
     address immutable tokenImplementation;
 
     address[] public allTokens;
     uint256 public launchCost;
 
-    constructor(address _uniswapV2Router) Ownable(msg.sender) {
+    constructor(
+        address _uniswapV2Router,
+        address _usdcToken
+    ) Ownable(msg.sender) {
         launchCost = 0.00125 ether;
         uniswapV2Router02 = _uniswapV2Router;
         tokenImplementation = address(new CrateTokenV2());
     }
 
-    function createToken(string memory name, string memory symbol, string memory songURI, bytes32 salt)
-        public
-        payable
-        nonReentrant
-        returns (address)
-    {
+    function createToken(
+        string memory name,
+        string memory symbol,
+        string memory songURI,
+        bytes32 salt
+    ) public payable nonReentrant returns (address) {
         address sender = LibMulticaller.sender();
         if (msg.value < launchCost) revert InsufficientPayment();
-        address clone = Clones.cloneDeterministic(tokenImplementation, _saltedSalt(sender, salt));
+        address clone = Clones.cloneDeterministic(
+            tokenImplementation,
+            _saltedSalt(sender, salt)
+        );
         CrateTokenV2 newToken = CrateTokenV2(clone);
         allTokens.push(address(newToken));
         emit TokenLaunched(address(newToken), name, symbol);
-        newToken.initialize(uniswapV2Router02, name, symbol, address(this), sender, songURI);
+        newToken.initialize(
+            uniswapV2Router02,
+            name,
+            symbol,
+            address(this),
+            sender,
+            songURI
+        );
         return address(newToken);
     }
 
-    function crateTokenAddress(address owner, bytes32 salt) public view returns (address addr, bool exists) {
-        addr = Clones.predictDeterministicAddress(tokenImplementation, _saltedSalt(owner, salt), address(this));
+    function crateTokenAddress(
+        address owner,
+        bytes32 salt
+    ) public view returns (address addr, bool exists) {
+        addr = Clones.predictDeterministicAddress(
+            tokenImplementation,
+            _saltedSalt(owner, salt),
+            address(this)
+        );
         exists = addr.code.length != 0;
     }
 
-    function _saltedSalt(address owner, bytes32 salt) internal view returns (bytes32 result) {
+    function _saltedSalt(
+        address owner,
+        bytes32 salt
+    ) internal view returns (bytes32 result) {
         assembly {
             mstore(0x20, owner)
             mstore(0x0c, chainid())
@@ -58,7 +82,7 @@ contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
     }
 
     function withdraw() public onlyOwner {
-        (bool sent,) = owner().call{value: address(this).balance}("");
+        (bool sent, ) = owner().call{value: address(this).balance}("");
         if (!sent) revert TransferFailed();
     }
 

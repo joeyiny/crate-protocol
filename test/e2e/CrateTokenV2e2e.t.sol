@@ -10,6 +10,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
     CrateFactoryV2 factory;
     CrateTokenV2 token;
     address uniswapRouter = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24; //Router on Base
+    address base = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; //USDC on Base
 
     address owner = address(0x420);
     address alice = address(0x123);
@@ -26,12 +27,19 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.deal(bob, 1000 ether);
 
         vm.startPrank(owner);
-        factory = new CrateFactoryV2(uniswapRouter);
+        factory = new CrateFactoryV2(uniswapRouter, base);
         string memory name = "TestToken";
         string memory symbol = "TTK";
         string memory songURI = "example.com";
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
-        address tokenAddress = address(factory.createToken{value: 0.00125 ether}(name, symbol, songURI, salt));
+        address tokenAddress = address(
+            factory.createToken{value: 0.00125 ether}(
+                name,
+                symbol,
+                songURI,
+                salt
+            )
+        );
         token = CrateTokenV2(tokenAddress);
         vm.stopPrank();
     }
