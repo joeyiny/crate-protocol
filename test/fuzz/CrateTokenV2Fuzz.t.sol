@@ -89,6 +89,13 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         token.fund(2000 * 1e6);
 
         assertTrue(token.phase() == Phase.BONDING_CURVE, "Should now be in bonding curve phase");
+        assertTrue(token.balanceOf(bob) == (1000 * 1e18));
+        assertTrue(token.crowdfund(bob) == (1000 * 1e18));
+    }
+
+    function testFailFuzz_Buy() public prank(bob) {
+        // cannot buy in crowdfund phase
+        token.buy(10 * 1e6);
     }
 
     // function testFailFuzz_Donation(uint256 usdcAmount) public prank(bob) {

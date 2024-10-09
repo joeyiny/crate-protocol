@@ -120,6 +120,8 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     }
 
     function buy(uint256 _amount) public payable nonReentrant {
+        if (phase != Phase.BONDING_CURVE) revert WrongPhase();
+
         if (_amount > tokensInCurve) revert InsufficientTokens();
         if (tokensInCurve >= 10 ** decimals()) {
             if (_amount < 10 ** decimals()) revert MustBuyAtLeastOneToken();
@@ -132,37 +134,6 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         uint256 crateFee;
         uint256 artistFee;
 
-        if (phase == Phase.CROWDFUND) {
-            if (tokensInCurve - _amount < CROWDFUND_THRESHOLD) {
-                phase = Phase.BONDING_CURVE;
-                emit CrowdfundEnded();
-                uint256 excess = CROWDFUND_THRESHOLD - (tokensInCurve - _amount);
-                uint256 crowdfundAmount = _amount - excess;
-                uint256 crowdfundPrice = getBuyPrice(crowdfundAmount);
-                tokensInCurve -= crowdfundAmount;
-                crowdfund[sender] += crowdfundAmount;
-                uint256 bondingCurvePrice = getBuyPrice(excess);
-                tokensInCurve -= excess;
-                crateFee = (crowdfundPrice / 10) + (bondingCurvePrice * CRATE_FEE_PERCENT) / 1 ether;
-                artistFee = ((crowdfundPrice * 9) / 10) + (bondingCurvePrice * ARTIST_FEE_PERCENT) / 1 ether;
-                totalPayment = crateFee + artistFee + bondingCurvePrice;
-            } else {
-                uint256 price = getBuyPrice(_amount);
-                tokensInCurve -= _amount;
-                crowdfund[sender] += _amount;
-                crateFee = (price / 10);
-                artistFee = ((price * 9) / 10);
-                totalPayment = crateFee + artistFee;
-            }
-        } else if (phase == Phase.BONDING_CURVE) {
-            uint256 price = getBuyPrice(_amount);
-            tokensInCurve -= _amount;
-            crateFee = (price * CRATE_FEE_PERCENT) / 1 ether;
-            artistFee = (price * ARTIST_FEE_PERCENT) / 1 ether;
-            totalPayment = price + crateFee + artistFee;
-        } else {
-            revert WrongPhase();
-        }
 
         artistFees += artistFee;
         if (msg.value < totalPayment) revert InsufficientPayment();
