@@ -20,6 +20,7 @@ contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
     constructor(address _uniswapV2Router, address _usdcToken) Ownable(msg.sender) {
         launchCost = 0.00125 ether;
         uniswapV2Router02 = _uniswapV2Router;
+        usdcToken = _usdcToken;
         tokenImplementation = address(new CrateTokenV2());
     }
 
@@ -35,7 +36,7 @@ contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
         CrateTokenV2 newToken = CrateTokenV2(clone);
         allTokens.push(address(newToken));
         emit TokenLaunched(address(newToken), name, symbol);
-        newToken.initialize(uniswapV2Router02, name, symbol, address(this), sender, songURI);
+        newToken.initialize(uniswapV2Router02, usdcToken, name, symbol, address(this), sender, songURI);
         return address(newToken);
     }
 

@@ -18,6 +18,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     uint256 private constant ARTIST_FEE_PERCENT = 5e15;
 
     address public uniswapV2Router02;
+    address public usdcToken;
     address public protocolFeeDestination;
     address public artistFeeDestination;
 
@@ -36,6 +37,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
 
     function initialize(
         address _uniswapV2Router02,
+        address _usdcToken,
         string memory _name,
         string memory _symbol,
         address _protocolAddress,
@@ -47,6 +49,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         artistFeeDestination = _artistAddress;
         protocolFeeDestination = _protocolAddress;
         uniswapV2Router02 = _uniswapV2Router02;
+        usdcToken = _usdcToken;
         phase = Phase.CROWDFUND;
         tokensInCurve = MAX_CURVE_SUPPLY;
         songURI = _songURI;
