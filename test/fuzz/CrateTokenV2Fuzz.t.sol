@@ -99,6 +99,122 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         token.buy(10 * 1e6);
     }
 
+    function test_CancelCrowdfund() public prank(bob) {
+        // Approve the contract to transfer USDC on behalf of the user (bob)
+        IERC20(usdc).approve(address(token), 100_000 * 1e6);
+
+        // Fund the crowdfund partially to set up state
+        token.fund(3000 * 1e6);
+        assertTrue(token.phase() == Phase.CROWDFUND, "Should be in crowdfund phase");
+
+        // Confirm bob's participation and balances before cancellation
+        assertTrue(token.amountPaid(bob) == 3000 * 1e6, "Bob's amount paid should be 3000 USDC");
+        assertTrue(token.crowdfundTokens(bob) > 0, "Bob should have received crowdfund tokens");
+
+        // Now cancel the crowdfund
+        token.cancelCrowdfund();
+        assertTrue(token.phase() == Phase.CANCELED, "Phase should be CANCELED after cancelCrowdfund");
+
+        // Check that Bob's USDC was refunded correctly
+        assertEq(IERC20(usdc).balanceOf(bob), 100_000 * 1e6, "Bob should have received a full USDC refund");
+
+        // Verify that Bob's tokens were burned
+        assertEq(token.balanceOf(bob), 0, "Bob's tokens should be burned");
+
+        // Ensure the protocol and artist fees are reset to zero
+        assertEq(token.protocolFees(), 0, "Protocol fees should be reset to zero");
+        assertEq(token.artistFees(), 0, "Artist fees should be reset to zero");
+
+        // Verify internal state reset for Bob
+        assertEq(token.amountPaid(bob), 0, "Bob's amountPaid should be reset to zero");
+        assertEq(token.crowdfundTokens(bob), 0, "Bob's crowdfundTokens should be reset to zero");
+    }
+
+    function test_CancelCrowdfund_MultipleUsers() public {
+        address charlie = address(0x789);
+
+        // Set up initial USDC balances for users
+        deal(usdc, alice, 50_000 * 1e6);
+        deal(usdc, bob, 50_000 * 1e6);
+        deal(usdc, charlie, 50_000 * 1e6);
+
+        // Allow all users to approve the token contract for USDC transfers
+        vm.startPrank(alice);
+        IERC20(usdc).approve(address(token), 50_000 * 1e6);
+        vm.stopPrank();
+
+        vm.startPrank(bob);
+        IERC20(usdc).approve(address(token), 50_000 * 1e6);
+        vm.stopPrank();
+
+        vm.startPrank(charlie);
+        IERC20(usdc).approve(address(token), 50_000 * 1e6);
+        vm.stopPrank();
+
+        // Multiple transactions from each user
+        vm.startPrank(alice);
+        token.fund(200 * 1e6);
+        // token.fund(1000 * 1e6);
+        vm.stopPrank();
+
+        vm.startPrank(bob);
+        token.fund(1210 * 1e6);
+        token.fund(12 * 1e6);
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+        token.fund(9 * 1e6);
+        vm.stopPrank();
+
+        vm.startPrank(bob);
+        token.fund(12 * 1e6);
+        vm.stopPrank();
+
+        vm.startPrank(charlie);
+        token.fund(10 * 1e6);
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+        token.fund(9 * 1e6);
+        vm.stopPrank();
+
+        // Cancel the crowdfund
+        token.cancelCrowdfund();
+
+        // Check that all users have been refunded their USDC and their tokens have been burned
+        assertEq(IERC20(usdc).balanceOf(alice), 50_000 * 1e6, "Alice should have received a full USDC refund");
+        assertEq(IERC20(usdc).balanceOf(bob), 50_000 * 1e6, "Bob should have received a full USDC refund");
+        assertEq(IERC20(usdc).balanceOf(charlie), 50_000 * 1e6, "Charlie should have received a full USDC refund");
+
+        // Ensure that all users' tokens have been burned
+        assertEq(token.balanceOf(alice), 0, "Alice's tokens should be burned");
+        assertEq(token.balanceOf(bob), 0, "Bob's tokens should be burned");
+        assertEq(token.balanceOf(charlie), 0, "Charlie's tokens should be burned");
+
+        // Verify the protocol and artist fees are reset to zero
+        assertEq(token.protocolFees(), 0, "Protocol fees should be reset to zero");
+        assertEq(token.artistFees(), 0, "Artist fees should be reset to zero");
+
+        // Ensure internal state is reset for each user
+        assertEq(token.amountPaid(alice), 0, "Alice's amountPaid should be reset to zero");
+        assertEq(token.crowdfundTokens(alice), 0, "Alice's crowdfundTokens should be reset to zero");
+
+        assertEq(token.amountPaid(bob), 0, "Bob's amountPaid should be reset to zero");
+        assertEq(token.crowdfundTokens(bob), 0, "Bob's crowdfundTokens should be reset to zero");
+
+        assertEq(token.amountPaid(charlie), 0, "Charlie's amountPaid should be reset to zero");
+        assertEq(token.crowdfundTokens(charlie), 0, "Charlie's crowdfundTokens should be reset to zero");
+    }
+
+    function testFail_CancelCrowdfund_NotInCrowdfundPhase() public {
+        // Transition the phase to BONDING_CURVE to simulate an active phase
+        IERC20(usdc).approve(address(token), 100_000 * 1e6);
+        token.fund(5000 * 1e6); // Reaching the crowdfund goal to move to the BONDING_CURVE phase
+
+        // Attempt to cancel crowdfund in BONDING_CURVE phase, which should revert
+        token.cancelCrowdfund();
+    }
+
     // function testFailFuzz_Donation(uint256 usdcAmount) public prank(bob) {
     //     usdcAmount = bound(usdcAmount, 1, 999_999); // Less than $1 in USDC
     //     IERC20(usdc).approve(address(token), usdcAmount);

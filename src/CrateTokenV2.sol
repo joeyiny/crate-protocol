@@ -39,6 +39,8 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
 
     Phase public phase;
 
+    address[] private crowdfundParticipants;
+
     constructor() {
         _disableInitializers();
     }
@@ -93,6 +95,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         amountRaised += _usdcAmount;
         crowdfundTokens[sender] += numTokens; //Keep track of how many tokens this user purchased in the bonding curve
         amountPaid[sender] += _usdcAmount;
+        crowdfundParticipants.push(sender);
         _transfer(address(this), sender, numTokens);
 
         // Calculate fees
@@ -105,6 +108,32 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         // TODO: Switch pattern to accumulate/withdraw
         emit Fund(sender, _usdcAmount, numTokens);
         // require(IERC20(usdcToken).transfer(artistFeeDestination, artistFee), "Artist fee transfer failed");
+    }
+
+    //TODO: make this onlyOwner/onlyArtist
+    function cancelCrowdfund() external nonReentrant {
+        require(phase == Phase.CROWDFUND, "No longer in Crowdfund phase");
+
+        phase = Phase.CANCELED;
+
+        for (uint256 i = 0; i < crowdfundParticipants.length; i++) {
+            address user = crowdfundParticipants[i];
+            uint256 userAmountPaid = amountPaid[user];
+            uint256 userTokens = crowdfundTokens[user];
+
+            // Refund USDC
+            require(IERC20(usdcToken).transfer(user, userAmountPaid), "USDC refund failed");
+
+            // Destroy tokens
+            _burn(user, userTokens);
+
+            protocolFees = 0;
+            artistFees = 0;
+            // Reset user's state
+            amountPaid[user] = 0;
+            crowdfundTokens[user] = 0;
+        }
+        emit CrowdfundCanceled();
     }
 
     function calculateTokenAmount(uint256 _usdcAmount) public pure returns (uint256) {
@@ -258,6 +287,11 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     }
 
     function _update(address from, address to, uint256 value) internal override {
+        //tokens can be burned if crowdfund is canceled
+        if (to == address(0) && phase == Phase.CANCELED) {
+            super._update(from, to, value);
+            return;
+        }
         // only allow general transfers in market phase
         if (from != address(this) && to != address(this) && (phase != Phase.MARKET)) revert WrongPhase();
         super._update(from, to, value);
