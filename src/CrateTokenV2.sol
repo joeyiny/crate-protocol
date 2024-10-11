@@ -159,7 +159,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         address sender = LibMulticaller.sender();
 
         if (phase != Phase.BONDING_CURVE) revert WrongPhase();
-        if (balanceOf(sender) < _amount + crowdfund[sender]) revert InsufficientTokens();
+        if (balanceOf(sender) < _amount + crowdfundTokens[sender]) revert InsufficientTokens();
         if (_amount < 10 ** decimals()) revert MustSellAtLeastOneToken();
 
         uint256 price = getSellPrice(_amount);
