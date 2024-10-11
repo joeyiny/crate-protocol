@@ -60,8 +60,11 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
     function testFuzz_Donation(uint256 usdcAmount) public prank(bob) {
         uint256 initialUserBalance = IERC20(usdc).balanceOf(bob);
         usdcAmount = bound(usdcAmount, 1 * 1e6, 1000 * 1e6);
+        uint256 numTokens = token.calculateTokenAmount(usdcAmount);
         IERC20(usdc).approve(address(token), usdcAmount);
 
+        vm.expectEmit(true, true, true, true);
+        emit ICrateV2.Fund(address(bob), usdcAmount, numTokens);
         token.fund(usdcAmount);
         assertTrue(token.amountPaid(bob) == (usdcAmount));
 

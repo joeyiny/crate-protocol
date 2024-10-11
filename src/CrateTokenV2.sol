@@ -100,6 +100,8 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         artistCrowdfundFees += artistFee;
         // TODO: Switch pattern to accumulate/withdraw
         require(IERC20(usdcToken).transfer(protocolFeeDestination, crateFee), "Crate fee transfer failed");
+        emit Fund(sender, _usdcAmount, numTokens);
+        // require(IERC20(usdcToken).transfer(artistFeeDestination, artistFee), "Artist fee transfer failed");
     }
 
     function calculateTokenAmount(uint256 _usdcAmount) public pure returns (uint256) {
