@@ -77,7 +77,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         if (_usdcAmount + amountRaised >= CROWDFUND_GOAL) {
             _usdcAmount = CROWDFUND_GOAL - amountRaised;
             phase = Phase.BONDING_CURVE;
-            emit CrowdfundEnded();
+            emit CrowdfundCompleted();
         }
 
         // require(_usdcAmount >= 1 * 1e6, "Cannot pay less than $1");
