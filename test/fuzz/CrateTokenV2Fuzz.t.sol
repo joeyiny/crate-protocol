@@ -66,14 +66,14 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         assertTrue(token.amountPaid(bob) == (usdcAmount));
 
         assertEq(IERC20(usdc).balanceOf(bob), initialUserBalance - usdcAmount, "Bob should have usdc balance deducted");
-        assertEq(IERC20(usdc).balanceOf(address(token)), 0, "token contract should have not have any usdc");
+        // assertEq(IERC20(usdc).balanceOf(address(token)), 0, "token contract should have not have any usdc");
         assertTrue(
             IERC20(usdc).balanceOf(address(factory)) == (usdcAmount / 10),
             "protocol fee address should have earned 10% usdc"
         );
         assertTrue(
-            IERC20(usdc).balanceOf(address(artist)) == (usdcAmount - (usdcAmount / 10)),
-            "artist should have received 90% usdc"
+            token.artistCrowdfundFees() == (usdcAmount - (usdcAmount / 10)),
+            "artist fees should have accumulated by 90%"
         );
         assertTrue(token.balanceOf(bob) == (usdcAmount * 1e18) / (5 * 1e6), "user should have earned tokens");
     }

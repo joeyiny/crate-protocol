@@ -28,6 +28,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     uint256 public tokensInCurve;
     uint256 public artistFees;
     uint256 public amountRaised;
+    uint256 public artistCrowdfundFees; //The artist can only pull this when the crowdfund is complete, because refunds are still possible.
 
     mapping(address => uint256) public crowdfundTokens; //This is the amount of tokens users have bought in the crowdfund phase. This is to handle crowdfund cancels/refunds.
     mapping(address => uint256) public amountPaid; //This is the amount of money users have sent in the crowdfund phase. This is to handle crowdfund cancels/refunds.
@@ -96,9 +97,9 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         uint256 crateFee = (_usdcAmount * 10) / 100;
         uint256 artistFee = _usdcAmount - crateFee;
 
+        artistCrowdfundFees += artistFee;
         // TODO: Switch pattern to accumulate/withdraw
         require(IERC20(usdcToken).transfer(protocolFeeDestination, crateFee), "Crate fee transfer failed");
-        require(IERC20(usdcToken).transfer(artistFeeDestination, artistFee), "Artist fee transfer failed");
     }
 
     function calculateTokenAmount(uint256 _usdcAmount) public pure returns (uint256) {
