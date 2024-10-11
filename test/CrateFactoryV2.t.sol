@@ -104,5 +104,13 @@ contract CrateFactoryV2Test is TestUtils, ICrateV2 {
         factory.createToken{value: factory.launchCost()}(name, symbol, songURI, salt);
     }
 
+    function testCancelCrowdfund() public {
+        string memory name = "TestToken";
+        string memory symbol = "TTK";
+        string memory songURI = "example.com";
+        bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
+        address tokenAddress = address(factory.createToken{value: 0.00125 ether}(name, symbol, songURI, salt));
+    }
+
     receive() external payable {}
 }
