@@ -63,6 +63,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         IERC20(usdc).approve(address(token), usdcAmount);
 
         token.fund(usdcAmount);
+        assertTrue(token.amountPaid(bob) == (usdcAmount));
 
         assertEq(IERC20(usdc).balanceOf(bob), initialUserBalance - usdcAmount, "Bob should have usdc balance deducted");
         assertEq(IERC20(usdc).balanceOf(address(token)), 0, "token contract should have not have any usdc");
@@ -90,7 +91,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
 
         assertTrue(token.phase() == Phase.BONDING_CURVE, "Should now be in bonding curve phase");
         assertTrue(token.balanceOf(bob) == (1000 * 1e18));
-        assertTrue(token.crowdfund(bob) == (1000 * 1e18));
+        assertTrue(token.crowdfundTokens(bob) == (1000 * 1e18));
     }
 
     function testFailFuzz_Buy() public prank(bob) {

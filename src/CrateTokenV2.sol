@@ -29,7 +29,8 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     uint256 public artistFees;
     uint256 public amountRaised;
 
-    mapping(address => uint256) public crowdfund;
+    mapping(address => uint256) public crowdfundTokens; //This is the amount of tokens users have bought in the crowdfund phase. This is to handle crowdfund cancels/refunds.
+    mapping(address => uint256) public amountPaid; //This is the amount of money users have sent in the crowdfund phase. This is to handle crowdfund cancels/refunds.
 
     string public songURI;
 
@@ -87,6 +88,8 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         uint256 numTokens = calculateTokenAmount(_usdcAmount);
 
         amountRaised += _usdcAmount;
+        crowdfundTokens[sender] += numTokens; //Keep track of how many tokens this user purchased in the bonding curve
+        amountPaid[sender] += _usdcAmount;
         _transfer(address(this), sender, numTokens);
 
         // Calculate fees
