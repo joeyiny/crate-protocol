@@ -11,6 +11,7 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     uint256 private constant MAX_SUPPLY = 117_000e18;
 
+    //TODO: Let user set this
     uint256 public constant CROWDFUND_GOAL = 5000 * 1e6;
 
     address public uniswapV2Router02;
@@ -23,7 +24,8 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     uint256 public protocolFees;
     uint256 public artistFees;
     uint256 public amountRaised;
-    uint256 public artistCrowdfundFees; //The artist can only pull this when the crowdfund is complete, because refunds are still possible.
+
+    uint256 public artistCrowdfundFees; //The artist can only withdraw this when the crowdfund is complete, because refunds are still possible.
 
     mapping(address => uint256) public crowdfundTokens; //This is the amount of tokens users have bought in the crowdfund phase. This is to handle crowdfund cancels/refunds.
     mapping(address => uint256) public amountPaid; //This is the amount of money users have sent in the crowdfund phase. This is to handle crowdfund cancels/refunds.
@@ -74,8 +76,10 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
             emit CrowdfundCompleted();
         }
 
+        // Temporarily removed: TODO: Fix this and handle crowdfund being stuck issue
         // require(_usdcAmount >= 1 * 1e6, "Cannot pay less than $1");
         address sender = LibMulticaller.sender();
+
         // User must approve the contract to transfer USDC on their behalf
         require(IERC20(usdcToken).allowance(sender, address(this)) >= _usdcAmount, "USDC allowance too low");
 
@@ -87,11 +91,14 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         uint256 numTokens = calculateTokenAmount(_usdcAmount);
         require(numTokens > 0, "Cannot buy 0 tokens");
 
+        //Handle global state manipulation
         unsoldTokens -= numTokens;
         amountRaised += _usdcAmount;
         crowdfundTokens[sender] += numTokens; //Keep track of how many tokens this user purchased in the bonding curve
         amountPaid[sender] += _usdcAmount;
         crowdfundParticipants.push(sender);
+
+        //Transfer Tokens
         _transfer(address(this), sender, numTokens);
 
         // Calculate fees
