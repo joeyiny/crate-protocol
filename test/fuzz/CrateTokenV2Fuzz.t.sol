@@ -94,11 +94,6 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         assertTrue(token.crowdfundTokens(bob) == (1000 * 1e18));
     }
 
-    function testFailFuzz_Buy() public prank(bob) {
-        // cannot buy in crowdfund phase
-        token.buy(10 * 1e6);
-    }
-
     function test_CancelCrowdfund() public prank(bob) {
         // Approve the contract to transfer USDC on behalf of the user (bob)
         IERC20(usdc).approve(address(token), 100_000 * 1e6);

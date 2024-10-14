@@ -219,12 +219,13 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     }
 
     function withdrawArtistFees() public nonReentrant {
+        require(phase != Phase.CROWDFUND, "Cannot withdraw artist fees in the Crowdfund phase.");
         address sender = LibMulticaller.sender();
         if (sender != artistFeeDestination) revert OnlyArtist();
-        if (artistFees == 0) revert Zero();
-        uint256 fees = artistFees;
-        artistFees = 0;
-        (bool artistFeePaid,) = artistFeeDestination.call{value: fees}("");
+        if (artistCrowdfundFees == 0) revert Zero();
+        uint256 fees = artistCrowdfundFees;
+        artistCrowdfundFees = 0;
+        bool artistFeePaid = IERC20(usdcToken).transfer(artistFeeDestination, fees);
         if (!artistFeePaid) revert TransferFailed();
         emit ArtistFeesWithdrawn(artistFeeDestination, fees);
     }
