@@ -71,6 +71,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     function fund(uint256 _usdcAmount) public nonReentrant {
         // require(_usdcAmount >= 1 * 1e6, "Cannot pay less than $1");
         if (phase != Phase.CROWDFUND) revert WrongPhase();
+        require(_usdcAmount > 0, "Must donate more than 0");
 
         // Update phase
         // TODO: Handle the excess going into the bonding curve
@@ -91,6 +92,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
 
         // Calculate amount of tokens earned
         uint256 numTokens = calculateTokenAmount(_usdcAmount);
+        require(numTokens > 0, "Cannot buy 0 tokens");
 
         amountRaised += _usdcAmount;
         crowdfundTokens[sender] += numTokens; //Keep track of how many tokens this user purchased in the bonding curve
