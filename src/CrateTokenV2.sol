@@ -114,26 +114,26 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
 
     //TODO: make this onlyOwner/onlyArtist
     function cancelCrowdfund() external nonReentrant {
-        require(phase == Phase.CROWDFUND, "No longer in Crowdfund phase");
+        require(phase == Phase.CROWDFUND, "This token is no longer in the Crowdfund phase, cannot cancel.");
 
         phase = Phase.CANCELED;
+        protocolFees = 0;
+        artistFees = 0;
 
         for (uint256 i = 0; i < crowdfundParticipants.length; i++) {
             address user = crowdfundParticipants[i];
             uint256 userAmountPaid = amountPaid[user];
             uint256 userTokens = crowdfundTokens[user];
 
+            // Reset user's state
+            amountPaid[user] = 0;
+            crowdfundTokens[user] = 0;
+
             // Refund USDC
             require(IERC20(usdcToken).transfer(user, userAmountPaid), "USDC refund failed");
 
             // Destroy tokens
             _burn(user, userTokens);
-
-            protocolFees = 0;
-            artistFees = 0;
-            // Reset user's state
-            amountPaid[user] = 0;
-            crowdfundTokens[user] = 0;
         }
         emit CrowdfundCanceled();
     }
