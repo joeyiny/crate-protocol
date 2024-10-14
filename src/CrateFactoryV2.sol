@@ -5,9 +5,9 @@ import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {LibMulticaller} from "@multicaller/LibMulticaller.sol";
-import {CrateFactoryV2} from "src/CrateFactoryV2.sol";
-import {CrateTokenV2} from "src/CrateTokenV2.sol";
-import {ICrateV2} from "src/interfaces/ICrateV2.sol";
+import {CrateFactoryV2} from "./CrateFactoryV2.sol";
+import {CrateTokenV2} from "./CrateTokenV2.sol";
+import {ICrateV2} from "./interfaces/ICrateV2.sol";
 
 contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
     address public immutable uniswapV2Router02;
