@@ -145,16 +145,6 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         emit CrowdfundCanceled();
     }
 
-    function calculateTokenAmount(uint256 _usdcAmount) public pure returns (uint256) {
-        uint256 donationPrice = getDonationPrice();
-        uint256 tokenAmount = (_usdcAmount * 1e18) / donationPrice;
-        return tokenAmount;
-    }
-
-    function getDonationPrice() public pure returns (uint256) {
-        return 5 * 1e6; //$5 per copy
-    }
-
     function withdrawArtistFees() public nonReentrant {
         require(phase != Phase.CROWDFUND, "Cannot withdraw artist fees in the Crowdfund phase.");
         address sender = LibMulticaller.sender();
@@ -169,12 +159,14 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
 
     /// VIEW ///
 
-    function getPrice(uint256 supply, uint256 amount) private pure returns (uint256) {
-        return bondingCurve(supply + amount) - bondingCurve(supply);
+    function calculateTokenAmount(uint256 _usdcAmount) public pure returns (uint256) {
+        uint256 donationPrice = getDonationPrice();
+        uint256 tokenAmount = (_usdcAmount * 1e18) / donationPrice;
+        return tokenAmount;
     }
 
-    function bondingCurve(uint256 x) public pure returns (uint256) {
-        return (x * (x / 1e10 + 1)) / 16e16;
+    function getDonationPrice() public pure returns (uint256) {
+        return 5 * 1e6; //$5 per copy
     }
 
     /// INTERNAL ///
