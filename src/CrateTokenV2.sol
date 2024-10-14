@@ -113,6 +113,12 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     }
 
     //TODO: make this onlyOwner/onlyArtist
+    /**
+     * @notice Allows the cancellation of an ongoing crowdfund, providing refunds to all participants and preventing the distribution of tokens.
+     *
+     * @dev The purpose of this function is to improve the UX by offering a way to safely cancel a crowdfund when necessary.
+     * Without this function, crowdfunds could be stuck in limbo if the goal is never met. Also, we need a protection against malicious activity.
+     */
     function cancelCrowdfund() external nonReentrant {
         require(phase == Phase.CROWDFUND, "This token is no longer in the Crowdfund phase, cannot cancel.");
 
