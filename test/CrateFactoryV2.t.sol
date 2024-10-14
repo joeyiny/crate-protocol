@@ -25,7 +25,7 @@ contract CrateFactoryV2Test is TestUtils, ICrateV2 {
         string memory symbol = "TTK";
         string memory songURI = "example.com";
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
-        address tokenAddress = address(factory.createToken{value: 0.00125 ether}(name, symbol, songURI, salt));
+        address tokenAddress = address(factory.createToken{value: 0.04 ether}(name, symbol, songURI, salt));
 
         // Check if the token was created and if the event was emitted
         assertTrue(tokenAddress != address(0), "Token creation failed.");
@@ -47,7 +47,7 @@ contract CrateFactoryV2Test is TestUtils, ICrateV2 {
             string memory songURI = string(abi.encodePacked("example.com", i));
 
             bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
-            address tokenAddress = address(factory.createToken{value: 0.00125 ether}(name, symbol, songURI, salt));
+            address tokenAddress = address(factory.createToken{value: 0.04 ether}(name, symbol, songURI, salt));
             assertEq(factory.allTokens(i), tokenAddress, "Token address should be recorded in allTokens.");
         }
     }
@@ -109,7 +109,7 @@ contract CrateFactoryV2Test is TestUtils, ICrateV2 {
         string memory symbol = "TTK";
         string memory songURI = "example.com";
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
-        address tokenAddress = address(factory.createToken{value: 0.00125 ether}(name, symbol, songURI, salt));
+        address tokenAddress = address(factory.createToken{value: 0.04 ether}(name, symbol, songURI, salt));
     }
 
     receive() external payable {}
