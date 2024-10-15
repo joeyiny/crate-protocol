@@ -25,6 +25,7 @@ interface ICrateV2 {
     event ArtistFeesWithdrawn(address artist, uint256 amount);
     event ProtocolFeesPaid(uint256 amount);
     event LiquidityAdded(uint256 amountToken, uint256 amountETH, uint256 liquidity);
+    event CrowdfundGoalUpdated(uint256 minimumGoal, uint256 maximumGoal);
 
     error Zero();
     error WrongPhase();
@@ -35,4 +36,5 @@ interface ICrateV2 {
     error MustSellAtLeastOneToken();
     error InsufficientPayment();
     error SlippageToleranceExceeded();
+    error InvalidCrowdfundGoal();
 }

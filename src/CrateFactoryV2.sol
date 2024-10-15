@@ -15,6 +15,9 @@ contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
     address public immutable usdcToken;
     address immutable tokenImplementation;
 
+    uint256 public minCrowdfundGoal = 100e6; // $100 in USDC (minimum)
+    uint256 public maxCrowdfundGoal = 100_000e6; // $100,000 in USDC (maximum)
+
     address[] public allTokens;
     uint256 public launchCost;
 
@@ -27,19 +30,23 @@ contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
         tokenImplementation = address(new CrateTokenV2());
     }
 
-    function createToken(string memory name, string memory symbol, string memory songURI, bytes32 salt)
-        public
-        payable
-        nonReentrant
-        returns (address)
-    {
+    function createToken(
+        string memory name,
+        string memory symbol,
+        string memory songURI,
+        bytes32 salt,
+        uint256 crowdfundGoal
+    ) public payable nonReentrant returns (address) {
         address sender = LibMulticaller.sender();
         if (msg.value < launchCost) revert InsufficientPayment();
+        if (crowdfundGoal < minCrowdfundGoal || crowdfundGoal > maxCrowdfundGoal) {
+            revert InvalidCrowdfundGoal();
+        }
         address clone = Clones.cloneDeterministic(tokenImplementation, _saltedSalt(sender, salt));
         CrateTokenV2 newToken = CrateTokenV2(clone);
         allTokens.push(address(newToken));
         emit TokenLaunched(address(newToken), name, symbol);
-        newToken.initialize(uniswapV2Router02, usdcToken, name, symbol, address(this), sender, songURI);
+        newToken.initialize(uniswapV2Router02, usdcToken, name, symbol, address(this), sender, songURI, crowdfundGoal);
         return address(newToken);
     }
 
@@ -64,6 +71,13 @@ contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
     function updateLaunchCost(uint256 newCost) public onlyOwner {
         launchCost = newCost;
         emit LaunchCostUpdated(newCost);
+    }
+
+    function updateCrowdfundGoalLimits(uint256 _minCrowdfundGoal, uint256 _maxCrowdfundGoal) external onlyOwner {
+        require(_minCrowdfundGoal <= _maxCrowdfundGoal, "Invalid goal limits");
+        minCrowdfundGoal = _minCrowdfundGoal;
+        maxCrowdfundGoal = _maxCrowdfundGoal;
+        emit CrowdfundGoalUpdated(_minCrowdfundGoal, _maxCrowdfundGoal);
     }
 
     function withdraw() public onlyOwner {

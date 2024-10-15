@@ -35,9 +35,66 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         string memory symbol = "TTK";
         string memory songURI = "example.com";
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
-        address tokenAddress = address(factory.createToken{value: 0.04 ether}(name, symbol, songURI, salt));
+        address tokenAddress = address(factory.createToken{value: 0.04 ether}(name, symbol, songURI, salt, 5000e6));
         token = CrateTokenV2(tokenAddress);
         vm.stopPrank();
+    }
+
+    function test_CreateTokenWithValidCrowdfundGoal() public {
+        uint256 validGoal = 10_000e6; // $10,000
+        vm.startPrank(owner);
+        string memory name = "ValidGoalToken";
+        string memory symbol = "VGT";
+        string memory songURI = "example.com/valid";
+        bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
+        address tokenAddress = factory.createToken{value: 0.04 ether}(name, symbol, songURI, salt, validGoal);
+        CrateTokenV2 validToken = CrateTokenV2(tokenAddress);
+        vm.stopPrank();
+
+        assertEq(validToken.crowdfundGoal(), validGoal);
+    }
+
+    function testFail_CreateTokenWithBelowMinCrowdfundGoal() public {
+        uint256 invalidGoal = 50e6; // Below $100 minimum
+        vm.startPrank(owner);
+        string memory name = "BelowMinToken";
+        string memory symbol = "BMT";
+        string memory songURI = "example.com/belowmin";
+        bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
+        factory.createToken{value: 0.04 ether}(name, symbol, songURI, salt, invalidGoal);
+        vm.stopPrank();
+    }
+
+    function testFail_CreateTokenWithAboveMaxCrowdfundGoal() public {
+        uint256 invalidGoal = 200_000e6; // Above $100,000 maximum
+        vm.startPrank(owner);
+        string memory name = "AboveMaxToken";
+        string memory symbol = "AMT";
+        string memory songURI = "example.com/abovemax";
+        bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
+        factory.createToken{value: 0.04 ether}(name, symbol, songURI, salt, invalidGoal);
+        vm.stopPrank();
+    }
+
+    function test_OwnerCanUpdateCrowdfundGoalLimits() public {
+        vm.startPrank(owner);
+        factory.updateCrowdfundGoalLimits(200e6, 999_000e6);
+        vm.stopPrank();
+
+        assertEq(factory.minCrowdfundGoal(), 200e6);
+        assertEq(factory.maxCrowdfundGoal(), 999_000e6);
+
+        uint256 newValidGoal = 885_000e6;
+        vm.startPrank(owner);
+        string memory name = "NewGoalToken";
+        string memory symbol = "NGT";
+        string memory songURI = "example.com/newgoal";
+        bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
+        address tokenAddress = factory.createToken{value: 0.04 ether}(name, symbol, songURI, salt, newValidGoal);
+        CrateTokenV2 newToken = CrateTokenV2(tokenAddress);
+        vm.stopPrank();
+
+        assertEq(newToken.crowdfundGoal(), newValidGoal);
     }
 
     function testWithdrawArtistFees() public {

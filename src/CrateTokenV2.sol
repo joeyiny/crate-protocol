@@ -15,8 +15,7 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     uint256 private constant MAX_SUPPLY = 5_000e18;
 
-    //TODO: Let user set this
-    uint256 public constant CROWDFUND_GOAL = 5000 * 1e6;
+    uint256 public crowdfundGoal;
 
     address public uniswapV2Router02;
     address public usdcToken;
@@ -50,7 +49,8 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         string memory _symbol,
         address _protocolAddress,
         address _artistAddress,
-        string memory _songURI
+        string memory _songURI,
+        uint256 _crowdfundGoal
     ) public initializer {
         __ERC20_init(_name, _symbol);
         _mint(address(this), MAX_SUPPLY);
@@ -61,6 +61,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         phase = Phase.CROWDFUND;
         unsoldTokens = MAX_SUPPLY;
         songURI = _songURI;
+        crowdfundGoal = _crowdfundGoal;
         _approve(address(this), uniswapV2Router02, MAX_SUPPLY);
     }
 
@@ -72,8 +73,8 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
 
         // Update phase
         // TODO: Handle the excess going into the bonding curve
-        if (_usdcAmount + amountRaised >= CROWDFUND_GOAL) {
-            _usdcAmount = CROWDFUND_GOAL - amountRaised;
+        if (_usdcAmount + amountRaised >= crowdfundGoal) {
+            _usdcAmount = crowdfundGoal - amountRaised;
             phase = Phase.BONDING_CURVE;
             emit CrowdfundCompleted();
         }
