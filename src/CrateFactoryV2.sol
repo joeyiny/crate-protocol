@@ -8,6 +8,7 @@ import {LibMulticaller} from "@multicaller/LibMulticaller.sol";
 import {CrateFactoryV2} from "./CrateFactoryV2.sol";
 import {CrateTokenV2} from "./CrateTokenV2.sol";
 import {ICrateV2} from "./interfaces/ICrateV2.sol";
+import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
     address public immutable uniswapV2Router02;
@@ -16,6 +17,8 @@ contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
 
     address[] public allTokens;
     uint256 public launchCost;
+
+    event ProtocolFeesWithdrawn(uint256 amount);
 
     constructor(address _uniswapV2Router, address _usdcToken) Ownable(msg.sender) {
         launchCost = 0.04 ether;
@@ -60,8 +63,10 @@ contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
     }
 
     function withdraw() public onlyOwner {
-        (bool sent,) = owner().call{value: address(this).balance}("");
+        uint256 balance = IERC20(usdcToken).balanceOf(address(this));
+        bool sent = IERC20(usdcToken).transfer(msg.sender, balance);
         if (!sent) revert TransferFailed();
+        emit ProtocolFeesWithdrawn(balance);
     }
 
     receive() external payable {}

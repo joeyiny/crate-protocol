@@ -69,7 +69,9 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
 
         assertEq(IERC20(usdc).balanceOf(bob), initialUserBalance - usdcAmount, "Bob should have usdc balance deducted");
         // assertEq(IERC20(usdc).balanceOf(address(token)), 0, "token contract should have not have any usdc");
-        assertTrue(token.protocolFees() == (usdcAmount / 10), "protocol fee address should have earned 10% usdc");
+        assertTrue(
+            token.protocolCrowdfundFees() == (usdcAmount / 10), "protocol fee address should have earned 10% usdc"
+        );
         assertTrue(
             token.artistCrowdfundFees() == (usdcAmount - (usdcAmount / 10)),
             "artist fees should have accumulated by 90%"
@@ -116,8 +118,8 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         assertEq(token.balanceOf(bob), 0, "Bob's tokens should be burned");
 
         // Ensure the protocol and artist fees are reset to zero
-        assertEq(token.protocolFees(), 0, "Protocol fees should be reset to zero");
-        assertEq(token.artistFees(), 0, "Artist fees should be reset to zero");
+        assertEq(token.protocolCrowdfundFees(), 0, "Protocol fees should be reset to zero");
+        assertEq(token.artistCrowdfundFees(), 0, "Artist fees should be reset to zero");
 
         // Verify internal state reset for Bob
         assertEq(token.amountPaid(bob), 0, "Bob's amountPaid should be reset to zero");
@@ -186,8 +188,8 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         assertEq(token.balanceOf(charlie), 0, "Charlie's tokens should be burned");
 
         // Verify the protocol and artist fees are reset to zero
-        assertEq(token.protocolFees(), 0, "Protocol fees should be reset to zero");
-        assertEq(token.artistFees(), 0, "Artist fees should be reset to zero");
+        assertEq(token.protocolCrowdfundFees(), 0, "Protocol fees should be reset to zero");
+        assertEq(token.artistCrowdfundFees(), 0, "Artist fees should be reset to zero");
 
         // Ensure internal state is reset for each user
         assertEq(token.amountPaid(alice), 0, "Alice's amountPaid should be reset to zero");

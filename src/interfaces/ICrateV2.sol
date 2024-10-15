@@ -22,7 +22,7 @@ interface ICrateV2 {
     event CrowdfundCanceled();
     event BondingCurveEnded();
     event ArtistFeesWithdrawn(address artist, uint256 amount);
-    event ProtocolFeesWithdrawn(uint256 amount);
+    event ProtocolFeesPaid(uint256 amount);
     event LiquidityAdded(uint256 amountToken, uint256 amountETH, uint256 liquidity);
 
     error Zero();

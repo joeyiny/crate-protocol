@@ -26,7 +26,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     uint256 public unsoldTokens;
 
     uint256 public artistCrowdfundFees; //The artist can only withdraw this when the crowdfund is complete.
-    uint256 public protocolFees;
+    uint256 public protocolCrowdfundFees;
     uint256 public amountRaised;
 
 
@@ -109,9 +109,18 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         uint256 artistFee = _usdcAmount - protocolFee;
 
         artistCrowdfundFees += artistFee;
-        protocolFees += protocolFee;
+        protocolCrowdfundFees += protocolFee;
 
         // TODO: Switch pattern to accumulate/withdraw
+        // require(IERC20(usdcToken).transfer(protocolFeeDestination, crateFee), "Crate fee transfer failed");
+        if (phase == Phase.BONDING_CURVE) {
+            if (protocolCrowdfundFees > 0) {
+                bool protocolFeePaid = IERC20(usdcToken).transfer(protocolFeeDestination, protocolCrowdfundFees);
+                if (!protocolFeePaid) revert TransferFailed();
+                emit ProtocolFeesPaid(protocolCrowdfundFees);
+                protocolCrowdfundFees = 0;
+            }
+        }
         emit Fund(sender, _usdcAmount, numTokens);
         // require(IERC20(usdcToken).transfer(artistFeeDestination, artistFee), "Artist fee transfer failed");
     }
@@ -127,7 +136,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         require(phase == Phase.CROWDFUND, "This token is no longer in the Crowdfund phase, cannot cancel.");
 
         phase = Phase.CANCELED;
-        protocolFees = 0;
+        protocolCrowdfundFees = 0;
         artistCrowdfundFees = 0;
 
         for (uint256 i = 0; i < crowdfundParticipants.length; i++) {
@@ -160,15 +169,6 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         emit ArtistFeesWithdrawn(artistFeeDestination, fees);
     }
 
-    function withdrawProtocolFees() public nonReentrant {
-        require(phase != Phase.CROWDFUND, "Cannot withdraw protocol fees in the Crowdfund phase.");
-        if (protocolFees == 0) revert Zero();
-        uint256 fees = protocolFees;
-        protocolFees = 0;
-        bool protocolFeePaid = IERC20(usdcToken).transfer(protocolFeeDestination, fees);
-        if (!protocolFeePaid) revert TransferFailed();
-        emit ProtocolFeesWithdrawn(fees);
-    }
 
     /// VIEW ///
 
