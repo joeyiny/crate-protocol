@@ -132,6 +132,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
      * Without this function, crowdfunds could be stuck in limbo if the goal is never met. Also, we need a protection against malicious activity.
      */
     function cancelCrowdfund() external nonReentrant {
+        require(msg.sender == artistFeeDestination, "Not authorized.");
         require(phase == Phase.CROWDFUND, "This token is no longer in the Crowdfund phase, cannot cancel.");
 
         phase = Phase.CANCELED;

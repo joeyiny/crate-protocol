@@ -28,6 +28,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.deal(alice, 1000 ether);
         vm.deal(bob, 1000 ether);
         deal(usdc, bob, 100_000 * 1e6);
+        deal(usdc, artist, 100_000 * 1e6);
 
         vm.startPrank(artist);
         factory = new CrateFactoryV2(uniswapRouter, usdc);
@@ -95,7 +96,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         assertTrue(token.crowdfundTokens(bob) == (1000 * 1e18));
     }
 
-    function test_CancelCrowdfund() public prank(bob) {
+    function test_CancelCrowdfund() public prank(artist) {
         // Approve the contract to transfer USDC on behalf of the user (bob)
         IERC20(usdc).approve(address(token), 100_000 * 1e6);
 
@@ -104,26 +105,33 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         assertTrue(token.phase() == Phase.CROWDFUND, "Should be in crowdfund phase");
 
         // Confirm bob's participation and balances before cancellation
-        assertTrue(token.amountPaid(bob) == 3000 * 1e6, "Bob's amount paid should be 3000 USDC");
-        assertTrue(token.crowdfundTokens(bob) > 0, "Bob should have received crowdfund tokens");
+        assertTrue(token.amountPaid(artist) == 3000 * 1e6, "Bob's amount paid should be 3000 USDC");
+        assertTrue(token.crowdfundTokens(artist) > 0, "Bob should have received crowdfund tokens");
 
         // Now cancel the crowdfund
         token.cancelCrowdfund();
         assertTrue(token.phase() == Phase.CANCELED, "Phase should be CANCELED after cancelCrowdfund");
 
         // Check that Bob's USDC was refunded correctly
-        assertEq(IERC20(usdc).balanceOf(bob), 100_000 * 1e6, "Bob should have received a full USDC refund");
+        assertEq(IERC20(usdc).balanceOf(artist), 100_000 * 1e6, "User should have received a full USDC refund");
 
         // Verify that Bob's tokens were burned
-        assertEq(token.balanceOf(bob), 0, "Bob's tokens should be burned");
+        assertEq(token.balanceOf(artist), 0, "User's tokens should be burned");
 
         // Ensure the protocol and artist fees are reset to zero
         assertEq(token.protocolCrowdfundFees(), 0, "Protocol fees should be reset to zero");
         assertEq(token.artistCrowdfundFees(), 0, "Artist fees should be reset to zero");
 
         // Verify internal state reset for Bob
-        assertEq(token.amountPaid(bob), 0, "Bob's amountPaid should be reset to zero");
-        assertEq(token.crowdfundTokens(bob), 0, "Bob's crowdfundTokens should be reset to zero");
+        assertEq(token.amountPaid(artist), 0, "Bob's amountPaid should be reset to zero");
+        assertEq(token.crowdfundTokens(artist), 0, "Bob's crowdfundTokens should be reset to zero");
+    }
+
+    function testFail_CancelCrowdfund_NoAuth() public {
+        vm.startPrank(alice);
+        token.fund(200 * 1e6);
+        token.cancelCrowdfund();
+        vm.stopPrank();
     }
 
     function test_CancelCrowdfund_MultipleUsers() public {
@@ -174,8 +182,11 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         token.fund(9 * 1e6);
         vm.stopPrank();
 
+        vm.startPrank(artist);
+
         // Cancel the crowdfund
         token.cancelCrowdfund();
+        vm.stopPrank();
 
         // Check that all users have been refunded their USDC and their tokens have been burned
         assertEq(IERC20(usdc).balanceOf(alice), 50_000 * 1e6, "Alice should have received a full USDC refund");
