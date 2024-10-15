@@ -22,8 +22,6 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     address public protocolFeeDestination;
     address public artistFeeDestination;
 
-    uint256 public unsoldTokens;
-
     uint256 public artistCrowdfundFees; //The artist can only withdraw this when the crowdfund is complete.
     uint256 public protocolCrowdfundFees;
     uint256 public amountRaised;
@@ -58,7 +56,6 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         uniswapV2Router02 = _uniswapV2Router02;
         usdcToken = _usdcToken;
         phase = Phase.CROWDFUND;
-        unsoldTokens = MAX_SUPPLY;
         songURI = _songURI;
         crowdfundGoal = _crowdfundGoal;
         _approve(address(this), uniswapV2Router02, MAX_SUPPLY);
@@ -93,7 +90,6 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         uint256 numTokens = calculateTokenAmount(_usdcAmount);
 
         //Handle global state manipulation
-        unsoldTokens -= numTokens;
         amountRaised += _usdcAmount;
         crowdfundTokens[sender] += numTokens; //Keep track of how many tokens this user purchased in the bonding curve
         amountPaid[sender] += _usdcAmount;
