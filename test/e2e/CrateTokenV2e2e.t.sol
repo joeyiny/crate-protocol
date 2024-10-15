@@ -97,6 +97,20 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         assertEq(newToken.crowdfundGoal(), newValidGoal);
     }
 
+    function test_DonationOverpay() public {
+        uint256 userBalance = IERC20(usdc).balanceOf(bob);
+        vm.startPrank(bob);
+        IERC20(usdc).approve(address(token), 100_000 * 1e6);
+        token.fund(20_000e6);
+        vm.stopPrank();
+
+        assertEq(
+            IERC20(usdc).balanceOf(bob),
+            100_000e6 - token.crowdfundGoal(),
+            "User should have been refunded overpaid amount"
+        );
+    }
+
     function testWithdrawArtistFees() public {
         vm.startPrank(bob);
         IERC20(usdc).approve(address(token), 100_000 * 1e6);
