@@ -91,7 +91,6 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
 
         // Calculate amount of tokens earned
         uint256 numTokens = calculateTokenAmount(_usdcAmount);
-        require(numTokens > 0, "Cannot buy 0 tokens");
 
         //Handle global state manipulation
         unsoldTokens -= numTokens;
