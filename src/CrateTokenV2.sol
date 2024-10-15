@@ -8,6 +8,10 @@ import {IUniswapV2Router02} from "./interfaces/IUniswapV2RouterV2.sol";
 import {ICrateV2} from "./interfaces/ICrateV2.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
+/**
+ * This is a crowdfunded token launch.
+ *     Users crowdfund and receive nontransferable tokens. Once the goal is hit, then the tokens become transferable and a market is launched for the tokens.
+ */
 contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     uint256 private constant MAX_SUPPLY = 117_000e18;
 
