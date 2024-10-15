@@ -37,7 +37,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
 
     Phase public phase;
 
-    address[] private crowdfundParticipants;
+    mapping(address => bool) public refundClaimed;
 
     constructor() {
         _disableInitializers();
@@ -98,7 +98,6 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         amountRaised += _usdcAmount;
         crowdfundTokens[sender] += numTokens; //Keep track of how many tokens this user purchased in the bonding curve
         amountPaid[sender] += _usdcAmount;
-        crowdfundParticipants.push(sender);
 
         //Transfer Tokens
         _transfer(address(this), sender, numTokens);
@@ -138,23 +137,27 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         phase = Phase.CANCELED;
         protocolCrowdfundFees = 0;
         artistCrowdfundFees = 0;
-
-        for (uint256 i = 0; i < crowdfundParticipants.length; i++) {
-            address user = crowdfundParticipants[i];
-            uint256 userAmountPaid = amountPaid[user];
-            uint256 userTokens = crowdfundTokens[user];
-
-            // Reset user's state
-            amountPaid[user] = 0;
-            crowdfundTokens[user] = 0;
-
-            // Refund USDC
-            require(IERC20(usdcToken).transfer(user, userAmountPaid), "USDC refund failed");
-
-            // Destroy tokens
-            _burn(user, userTokens);
-        }
         emit CrowdfundCanceled();
+    }
+
+    function claimRefund() external nonReentrant {
+        require(phase == Phase.CANCELED, "Crowdfund not canceled");
+        require(!refundClaimed[msg.sender], "Refund already claimed");
+        uint256 userAmountPaid = amountPaid[msg.sender];
+        uint256 userTokens = crowdfundTokens[msg.sender];
+        require(userAmountPaid > 0, "No funds to refund");
+
+        refundClaimed[msg.sender] = true;
+        amountPaid[msg.sender] = 0;
+        crowdfundTokens[msg.sender] = 0;
+
+        // Refund USDC
+        bool success = IERC20(usdcToken).transfer(msg.sender, userAmountPaid);
+        require(success, "USDC refund failed");
+        emit ClaimRefund(msg.sender, userAmountPaid);
+
+        // Burn tokens
+        _burn(msg.sender, userTokens);
     }
 
     function withdrawArtistFees() public nonReentrant {

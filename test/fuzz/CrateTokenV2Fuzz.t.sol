@@ -101,54 +101,42 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         assertTrue(token.crowdfundTokens(bob) == (1000 * 1e18));
     }
 
-    function test_CancelCrowdfund() public prank(artist) {
-        // Approve the contract to transfer USDC on behalf of the user (bob)
+    function test_CancelCrowdfund() public {
+        // Bob participates in the crowdfund
+        vm.startPrank(bob);
         IERC20(usdc).approve(address(token), 100_000 * 1e6);
-
-        // Fund the crowdfund partially to set up state
         token.fund(3000 * 1e6);
+        vm.stopPrank();
+
         assertTrue(token.phase() == Phase.CROWDFUND, "Should be in crowdfund phase");
 
-        // Confirm bob's participation and balances before cancellation
-        assertTrue(token.amountPaid(artist) == 3000 * 1e6, "Bob's amount paid should be 3000 USDC");
-        assertTrue(token.crowdfundTokens(artist) > 0, "Bob should have received crowdfund tokens");
+        // Confirm Bob's participation and balances before cancellation
+        assertEq(token.amountPaid(bob), 3000 * 1e6, "Bob's amount paid should be 3000 USDC");
+        assertTrue(token.crowdfundTokens(bob) > 0, "Bob should have received crowdfund tokens");
 
         // Now cancel the crowdfund
+        vm.prank(artist);
         token.cancelCrowdfund();
         assertTrue(token.phase() == Phase.CANCELED, "Phase should be CANCELED after cancelCrowdfund");
 
+        // Bob claims refund
+        vm.startPrank(bob);
+        token.claimRefund();
+        vm.stopPrank();
+
         // Check that Bob's USDC was refunded correctly
-        assertEq(IERC20(usdc).balanceOf(artist), 100_000 * 1e6, "User should have received a full USDC refund");
+        assertEq(IERC20(usdc).balanceOf(bob), 100_000 * 1e6, "Bob should have received a full USDC refund");
 
         // Verify that Bob's tokens were burned
-        assertEq(token.balanceOf(artist), 0, "User's tokens should be burned");
+        assertEq(token.balanceOf(bob), 0, "Bob's tokens should be burned");
 
         // Ensure the protocol and artist fees are reset to zero
         assertEq(token.protocolCrowdfundFees(), 0, "Protocol fees should be reset to zero");
         assertEq(token.artistCrowdfundFees(), 0, "Artist fees should be reset to zero");
 
         // Verify internal state reset for Bob
-        assertEq(token.amountPaid(artist), 0, "Bob's amountPaid should be reset to zero");
-        assertEq(token.crowdfundTokens(artist), 0, "Bob's crowdfundTokens should be reset to zero");
-    }
-
-    function testFail_CancelCrowdfund_NoAuth() public {
-        vm.startPrank(alice);
-        IERC20(usdc).approve(address(token), 100_000 * 1e6);
-
-        token.fund(200 * 1e6);
-        token.cancelCrowdfund();
-        vm.stopPrank();
-    }
-
-    function test_CancelCrowdfund_ProtocolAuth() public {
-        vm.startPrank(bob);
-        IERC20(usdc).approve(address(token), 100_000 * 1e6);
-        token.fund(200 * 1e6);
-        vm.stopPrank();
-        vm.startPrank(protocolOwner);
-        factory.cancelTokenCrowdfund(address(token));
-        vm.stopPrank();
+        assertEq(token.amountPaid(bob), 0, "Bob's amountPaid should be reset to zero");
+        assertEq(token.crowdfundTokens(bob), 0, "Bob's crowdfundTokens should be reset to zero");
     }
 
     function test_CancelCrowdfund_MultipleUsers() public {
@@ -175,7 +163,6 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         // Multiple transactions from each user
         vm.startPrank(alice);
         token.fund(200 * 1e6);
-        // token.fund(1000 * 1e6);
         vm.stopPrank();
 
         vm.startPrank(bob);
@@ -199,10 +186,69 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         token.fund(9 * 1e6);
         vm.stopPrank();
 
-        vm.startPrank(artist);
+        // Check initial balances and state before cancellation
+        assertEq(
+            token.balanceOf(alice),
+            token.calculateTokenAmount(218 * 1e6),
+            "Alice's token balance should be correct before cancellation"
+        );
+        assertEq(
+            token.balanceOf(bob),
+            token.calculateTokenAmount(1234 * 1e6),
+            "Bob's token balance should be correct before cancellation"
+        );
+        assertEq(
+            token.balanceOf(charlie),
+            token.calculateTokenAmount(10 * 1e6),
+            "Charlie's token balance should be correct before cancellation"
+        );
+
+        assertEq(token.amountPaid(alice), 218 * 1e6, "Alice's amountPaid should be correct before cancellation");
+        assertEq(token.amountPaid(bob), 1234 * 1e6, "Bob's amountPaid should be correct before cancellation");
+        assertEq(token.amountPaid(charlie), 10 * 1e6, "Charlie's amountPaid should be correct before cancellation");
+
+        assertEq(
+            token.crowdfundTokens(alice),
+            token.calculateTokenAmount(218 * 1e6),
+            "Alice's crowdfundTokens should be correct before cancellation"
+        );
+        assertEq(
+            token.crowdfundTokens(bob),
+            token.calculateTokenAmount(1234 * 1e6),
+            "Bob's crowdfundTokens should be correct before cancellation"
+        );
+        assertEq(
+            token.crowdfundTokens(charlie),
+            token.calculateTokenAmount(10 * 1e6),
+            "Charlie's crowdfundTokens should be correct before cancellation"
+        );
+
+        assertEq(
+            token.protocolCrowdfundFees(),
+            (1234 * 1e6 + 218 * 1e6 + 10 * 1e6) * 10 / 100,
+            "Protocol fees should be correct before cancellation"
+        );
+        assertEq(
+            token.artistCrowdfundFees(),
+            (1234 * 1e6 + 218 * 1e6 + 10 * 1e6) * 90 / 100,
+            "Artist fees should be correct before cancellation"
+        );
 
         // Cancel the crowdfund
+        vm.prank(artist);
         token.cancelCrowdfund();
+
+        // Users attempt to claim refunds
+        vm.startPrank(alice);
+        token.claimRefund();
+        vm.stopPrank();
+
+        vm.startPrank(bob);
+        token.claimRefund();
+        vm.stopPrank();
+
+        vm.startPrank(charlie);
+        token.claimRefund();
         vm.stopPrank();
 
         // Check that all users have been refunded their USDC and their tokens have been burned
@@ -228,6 +274,63 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
 
         assertEq(token.amountPaid(charlie), 0, "Charlie's amountPaid should be reset to zero");
         assertEq(token.crowdfundTokens(charlie), 0, "Charlie's crowdfundTokens should be reset to zero");
+    }
+
+    function testFail_ClaimRefund_NotCanceled() public {
+        // Bob tries to claim refund before crowdfund is canceled
+        vm.startPrank(bob);
+        token.claimRefund();
+        vm.stopPrank();
+    }
+
+    function testFail_ClaimRefund_Twice() public {
+        // Bob participates in the crowdfund
+        vm.startPrank(bob);
+        IERC20(usdc).approve(address(token), 100_000 * 1e6);
+        token.fund(3000 * 1e6);
+        vm.stopPrank();
+
+        // Cancel the crowdfund
+        vm.prank(artist);
+        token.cancelCrowdfund();
+
+        // Bob claims refund
+        vm.startPrank(bob);
+        token.claimRefund();
+        // Bob tries to claim refund again (should fail)
+        token.claimRefund();
+        vm.stopPrank();
+    }
+
+    function testFail_ClaimRefund_NoFunds() public {
+        // Alice did not participate in the crowdfund
+        vm.prank(artist);
+        token.fund(1000e6);
+        token.cancelCrowdfund();
+
+        // Alice tries to claim refund (should fail)
+        vm.startPrank(alice);
+        token.claimRefund();
+        vm.stopPrank();
+    }
+
+    function testFail_CancelCrowdfund_NoAuth() public {
+        vm.startPrank(alice);
+        IERC20(usdc).approve(address(token), 100_000 * 1e6);
+
+        token.fund(200 * 1e6);
+        token.cancelCrowdfund();
+        vm.stopPrank();
+    }
+
+    function test_CancelCrowdfund_ProtocolAuth() public {
+        vm.startPrank(bob);
+        IERC20(usdc).approve(address(token), 100_000 * 1e6);
+        token.fund(200 * 1e6);
+        vm.stopPrank();
+        vm.startPrank(protocolOwner);
+        factory.cancelTokenCrowdfund(address(token));
+        vm.stopPrank();
     }
 
     function testFail_CancelCrowdfund_NotInCrowdfundPhase() public {
