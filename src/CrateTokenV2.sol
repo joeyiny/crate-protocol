@@ -25,11 +25,10 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
 
     uint256 public unsoldTokens;
 
+    uint256 public artistCrowdfundFees; //The artist can only withdraw this when the crowdfund is complete.
     uint256 public protocolFees;
-    uint256 public artistFees;
     uint256 public amountRaised;
 
-    uint256 public artistCrowdfundFees; //The artist can only withdraw this when the crowdfund is complete, because refunds are still possible.
 
     mapping(address => uint256) public crowdfundTokens; //This is the amount of tokens users have bought in the crowdfund phase. This is to handle crowdfund cancels/refunds.
     mapping(address => uint256) public amountPaid; //This is the amount of money users have sent in the crowdfund phase. This is to handle crowdfund cancels/refunds.
@@ -129,7 +128,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
 
         phase = Phase.CANCELED;
         protocolFees = 0;
-        artistFees = 0;
+        artistCrowdfundFees = 0;
 
         for (uint256 i = 0; i < crowdfundParticipants.length; i++) {
             address user = crowdfundParticipants[i];
