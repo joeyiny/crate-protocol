@@ -9,14 +9,14 @@ import {ICrateV2} from "src/interfaces/ICrateV2.sol";
 contract CrateFactoryV2Test is TestUtils, ICrateV2 {
     CrateFactoryV2 factory;
     address uniswapRouter = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
-    address base = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; //USDC on Base
+    address usdc = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; //USDC on Base
 
     address tester;
 
     function setUp() public {
         // Set up the environment before each test
         tester = address(this);
-        factory = new CrateFactoryV2(uniswapRouter, base);
+        factory = new CrateFactoryV2(usdc);
     }
 
     function testCreateToken() public {

@@ -17,7 +17,6 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
 
     uint256 public crowdfundGoal;
 
-    address public uniswapV2Router02;
     address public usdcToken;
     address public protocolFeeDestination;
     address public artistFeeDestination;
@@ -40,7 +39,6 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     }
 
     function initialize(
-        address _uniswapV2Router02,
         address _usdcToken,
         string memory _name,
         string memory _symbol,
@@ -53,12 +51,10 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         _mint(address(this), MAX_SUPPLY);
         artistFeeDestination = _artistAddress;
         protocolFeeDestination = _protocolAddress;
-        uniswapV2Router02 = _uniswapV2Router02;
         usdcToken = _usdcToken;
         phase = Phase.CROWDFUND;
         songURI = _songURI;
         crowdfundGoal = _crowdfundGoal;
-        _approve(address(this), uniswapV2Router02, MAX_SUPPLY);
     }
 
     /// PUBLIC ///

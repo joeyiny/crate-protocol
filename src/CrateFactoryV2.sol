@@ -11,7 +11,6 @@ import {ICrateV2} from "./interfaces/ICrateV2.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
-    address public immutable uniswapV2Router02;
     address public immutable usdcToken;
     address immutable tokenImplementation;
 
@@ -23,9 +22,8 @@ contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
 
     event ProtocolFeesWithdrawn(uint256 amount);
 
-    constructor(address _uniswapV2Router, address _usdcToken) Ownable(msg.sender) {
+    constructor(address _usdcToken) Ownable(msg.sender) {
         launchCost = 0.04 ether;
-        uniswapV2Router02 = _uniswapV2Router;
         usdcToken = _usdcToken;
         tokenImplementation = address(new CrateTokenV2());
     }
@@ -46,7 +44,7 @@ contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
         CrateTokenV2 newToken = CrateTokenV2(clone);
         allTokens.push(address(newToken));
         emit TokenLaunched(address(newToken), name, symbol);
-        newToken.initialize(uniswapV2Router02, usdcToken, name, symbol, address(this), sender, songURI, crowdfundGoal);
+        newToken.initialize(usdcToken, name, symbol, address(this), sender, songURI, crowdfundGoal);
         return address(newToken);
     }
 

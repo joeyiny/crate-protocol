@@ -30,7 +30,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         deal(usdc, owner, 100_000 * 1e6);
 
         vm.startPrank(owner);
-        factory = new CrateFactoryV2(uniswapRouter, usdc);
+        factory = new CrateFactoryV2(usdc);
         string memory name = "TestToken";
         string memory symbol = "TTK";
         string memory songURI = "example.com";
