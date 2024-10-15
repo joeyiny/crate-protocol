@@ -18,20 +18,25 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
     // address usdc = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; //USDC on Base
     address usdc = address(new MockUSDC());
     address artist = address(0x420);
+    address protocolOwner = address(0xb39);
     address alice = address(0x123);
     address bob = address(0x456);
     // address protocolFeeAddress = address(0x789);
     address artistAddress = address(0xabc);
 
     function setUp() public {
-        vm.deal(artist, 1000 ether);
-        vm.deal(alice, 1000 ether);
-        vm.deal(bob, 1000 ether);
+        vm.deal(artist, 1 ether);
+        vm.deal(protocolOwner, 1000 ether);
+        vm.deal(alice, 1 ether);
+        vm.deal(bob, 1 ether);
         deal(usdc, bob, 100_000 * 1e6);
         deal(usdc, artist, 100_000 * 1e6);
 
-        vm.startPrank(artist);
+        vm.startPrank(protocolOwner);
         factory = new CrateFactoryV2(uniswapRouter, usdc);
+        vm.stopPrank();
+        vm.startPrank(artist);
+
         string memory name = "TestToken";
         string memory symbol = "TTK";
         string memory songURI = "example.com";
@@ -129,8 +134,20 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
 
     function testFail_CancelCrowdfund_NoAuth() public {
         vm.startPrank(alice);
+        IERC20(usdc).approve(address(token), 100_000 * 1e6);
+
         token.fund(200 * 1e6);
         token.cancelCrowdfund();
+        vm.stopPrank();
+    }
+
+    function test_CancelCrowdfund_ProtocolAuth() public {
+        vm.startPrank(bob);
+        IERC20(usdc).approve(address(token), 100_000 * 1e6);
+        token.fund(200 * 1e6);
+        vm.stopPrank();
+        vm.startPrank(protocolOwner);
+        factory.cancelTokenCrowdfund(address(token));
         vm.stopPrank();
     }
 

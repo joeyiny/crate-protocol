@@ -43,6 +43,10 @@ contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
         return address(newToken);
     }
 
+    function cancelTokenCrowdfund(address tokenAddress) external onlyOwner {
+        CrateTokenV2(tokenAddress).cancelCrowdfund();
+    }
+
     function crateTokenAddress(address owner, bytes32 salt) public view returns (address addr, bool exists) {
         addr = Clones.predictDeterministicAddress(tokenImplementation, _saltedSalt(owner, salt), address(this));
         exists = addr.code.length != 0;
