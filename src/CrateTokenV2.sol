@@ -13,7 +13,7 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
  *     Users crowdfund and receive nontransferable tokens. Once the goal is hit, then the tokens become transferable and a market is launched for the tokens.
  */
 contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
-    uint256 private constant MAX_SUPPLY = 117_000e18;
+    uint256 private constant MAX_SUPPLY = 5_000e18;
 
     //TODO: Let user set this
     uint256 public constant CROWDFUND_GOAL = 5000 * 1e6;

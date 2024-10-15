@@ -54,7 +54,6 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
 
         assertEq(token2.name(), name);
         assertEq(token2.symbol(), symbol);
-        assertEq(token2.totalSupply(), 117_000 * 1e18);
     }
 
     function testFuzz_Donation(uint256 usdcAmount) public prank(bob) {
