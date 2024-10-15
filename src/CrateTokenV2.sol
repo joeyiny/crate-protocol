@@ -157,6 +157,16 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         emit ArtistFeesWithdrawn(artistFeeDestination, fees);
     }
 
+    function withdrawProtocolFees() public nonReentrant {
+        require(phase != Phase.CROWDFUND, "Cannot withdraw protocol fees in the Crowdfund phase.");
+        if (protocolFees == 0) revert Zero();
+        uint256 fees = protocolFees;
+        protocolFees = 0;
+        bool protocolFeePaid = IERC20(usdcToken).transfer(protocolFeeDestination, fees);
+        if (!protocolFeePaid) revert TransferFailed();
+        emit ProtocolFeesWithdrawn(fees);
+    }
+
     /// VIEW ///
 
     function calculateTokenAmount(uint256 _usdcAmount) public pure returns (uint256) {

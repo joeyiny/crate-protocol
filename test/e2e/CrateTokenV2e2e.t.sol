@@ -72,6 +72,40 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.stopPrank();
     }
 
+    function testWithdrawProtocolFees() public {
+        assertEq(token.protocolFees(), 0, "Protocol fees should start at 0");
+        uint256 initialProtocolBalance = IERC20(usdc).balanceOf(token.protocolFeeDestination());
+
+        vm.startPrank(bob);
+        IERC20(usdc).approve(address(token), 100_000 * 1e6);
+        token.fund(5000 * 1e6);
+        vm.stopPrank();
+
+        uint256 protocolFees = token.protocolFees();
+
+        vm.startPrank(artist);
+        token.withdrawProtocolFees();
+        vm.stopPrank();
+
+        assertEq(token.protocolFees(), 0, "Protocol fees should reset to 0");
+        assertEq(
+            IERC20(usdc).balanceOf(token.protocolFeeDestination()),
+            initialProtocolBalance + protocolFees,
+            "Protocol fees were not correctly transferred"
+        );
+    }
+
+    function testFail_WithdrawProtocolFees_WrongPhase() public {
+        vm.startPrank(bob);
+
+        IERC20(usdc).approve(address(token), 100_000 * 1e6);
+        token.fund(4000 * 1e6);
+        vm.stopPrank();
+        vm.startPrank(artist);
+        token.withdrawProtocolFees();
+        vm.stopPrank();
+    }
+
     function testFail_WithdrawArtistFees_WrongUser() public {
         vm.startPrank(bob);
         IERC20(usdc).approve(address(token), 100_000 * 1e6);
