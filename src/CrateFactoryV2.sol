@@ -23,7 +23,7 @@ contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
     event ProtocolFeesWithdrawn(uint256 amount);
 
     constructor(address _usdcToken) Ownable(msg.sender) {
-        launchCost = 0.04 ether;
+        launchCost = 99e6; // $99 in USDC TODO: Add feature to get this back
         usdcToken = _usdcToken;
         tokenImplementation = address(new CrateTokenV2());
     }
@@ -34,16 +34,25 @@ contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
         string memory songURI,
         bytes32 salt,
         uint256 crowdfundGoal
-    ) public payable nonReentrant returns (address) {
+    ) public nonReentrant returns (address) {
         address sender = LibMulticaller.sender();
-        if (msg.value < launchCost) revert InsufficientPayment();
+
         if (crowdfundGoal < minCrowdfundGoal || crowdfundGoal > maxCrowdfundGoal) {
             revert InvalidCrowdfundGoal();
         }
+
+        // Check if the user has approved the contract to spend USDC
+        uint256 allowance = IERC20(usdcToken).allowance(sender, address(this));
+        if (allowance < launchCost) revert InsufficientPayment();
+
+        // Transfer USDC from the sender to the contract
+        bool success = IERC20(usdcToken).transferFrom(sender, address(this), launchCost);
+        if (!success) revert TransferFailed();
+
         address clone = Clones.cloneDeterministic(tokenImplementation, _saltedSalt(sender, salt));
         CrateTokenV2 newToken = CrateTokenV2(clone);
         allTokens.push(address(newToken));
-        emit TokenLaunched(address(newToken), name, symbol);
+        emit TokenLaunched(address(newToken), name, symbol, crowdfundGoal);
         newToken.initialize(usdcToken, name, symbol, address(this), sender, songURI, crowdfundGoal);
         return address(newToken);
     }

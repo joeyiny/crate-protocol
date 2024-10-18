@@ -35,7 +35,9 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         string memory symbol = "TTK";
         string memory songURI = "example.com";
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
-        address tokenAddress = address(factory.createToken{value: 0.04 ether}(name, symbol, songURI, salt, 5000e6));
+
+        IERC20(usdc).approve(address(factory), factory.launchCost());
+        address tokenAddress = address(factory.createToken(name, symbol, songURI, salt, 5000e6));
         token = CrateTokenV2(tokenAddress);
         vm.stopPrank();
     }
@@ -47,7 +49,9 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         string memory symbol = "VGT";
         string memory songURI = "example.com/valid";
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
-        address tokenAddress = factory.createToken{value: 0.04 ether}(name, symbol, songURI, salt, validGoal);
+        IERC20(usdc).approve(address(factory), factory.launchCost());
+
+        address tokenAddress = factory.createToken(name, symbol, songURI, salt, validGoal);
         CrateTokenV2 validToken = CrateTokenV2(tokenAddress);
         vm.stopPrank();
 
@@ -61,7 +65,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         string memory symbol = "BMT";
         string memory songURI = "example.com/belowmin";
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
-        factory.createToken{value: 0.04 ether}(name, symbol, songURI, salt, invalidGoal);
+        factory.createToken(name, symbol, songURI, salt, invalidGoal);
         vm.stopPrank();
     }
 
@@ -72,7 +76,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         string memory symbol = "AMT";
         string memory songURI = "example.com/abovemax";
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
-        factory.createToken{value: 0.04 ether}(name, symbol, songURI, salt, invalidGoal);
+        factory.createToken(name, symbol, songURI, salt, invalidGoal);
         vm.stopPrank();
     }
 
@@ -90,7 +94,8 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         string memory symbol = "NGT";
         string memory songURI = "example.com/newgoal";
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
-        address tokenAddress = factory.createToken{value: 0.04 ether}(name, symbol, songURI, salt, newValidGoal);
+        IERC20(usdc).approve(address(factory), factory.launchCost());
+        address tokenAddress = factory.createToken(name, symbol, songURI, salt, newValidGoal);
         CrateTokenV2 newToken = CrateTokenV2(tokenAddress);
         vm.stopPrank();
 
@@ -157,7 +162,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.stopPrank();
 
         vm.startPrank(owner);
-        assertEq(IERC20(usdc).balanceOf(address(factory)), 500 * 1e6, "Protocol fees are not correct");
+        assertEq(IERC20(usdc).balanceOf(address(factory)), 500e6 + 99e6, "Protocol fees are not correct"); //includes $99 launchfee
 
         factory.withdraw();
         assertEq(IERC20(usdc).balanceOf(address(factory)), 0, "Protocol fees are were not withdrawn");

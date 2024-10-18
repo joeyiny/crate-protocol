@@ -29,6 +29,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.deal(alice, 1 ether);
         vm.deal(bob, 1 ether);
         deal(usdc, bob, 100_000 * 1e6);
+        deal(usdc, alice, 100_000 * 1e6);
         deal(usdc, artist, 100_000 * 1e6);
 
         vm.startPrank(protocolOwner);
@@ -40,7 +41,9 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         string memory symbol = "TTK";
         string memory songURI = "example.com";
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
-        address tokenAddress = address(factory.createToken{value: 0.04 ether}(name, symbol, songURI, salt, 5000e6));
+
+        IERC20(usdc).approve(address(factory), factory.launchCost());
+        address tokenAddress = address(factory.createToken(name, symbol, songURI, salt, 5000e6));
         token = CrateTokenV2(tokenAddress);
         vm.stopPrank();
     }
@@ -54,7 +57,8 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.assume(bytes(songURI).length > 0);
 
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
-        address tokenAddress = address(factory.createToken{value: 0.04 ether}(name, symbol, songURI, salt, 5000e6));
+        IERC20(usdc).approve(address(factory), factory.launchCost());
+        address tokenAddress = address(factory.createToken(name, symbol, songURI, salt, 5000e6));
         CrateTokenV2 token2 = CrateTokenV2(tokenAddress);
 
         assertEq(token2.name(), name);

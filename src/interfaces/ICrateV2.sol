@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 interface ICrateV2 {
     /// FACTORY ///
 
-    event TokenLaunched(address tokenAddress, string name, string symbol);
+    event TokenLaunched(address tokenAddress, string name, string symbol, uint256 usdcGoal);
     event LaunchCostUpdated(uint256 newCost);
 
     /// CRATE ///
@@ -16,15 +16,15 @@ interface ICrateV2 {
         CANCELED
     }
 
-    event TokenTrade(address trader, uint256 tokenAmount, bool isPurchase, uint256 ethAmount);
+    // event TokenTrade(address trader, uint256 tokenAmount, bool isPurchase, uint256 ethAmount);
     event Fund(address funder, uint256 usdcAmount, uint256 tokenAmount);
     event CrowdfundCompleted();
     event CrowdfundCanceled();
     event ClaimRefund(address user, uint256 usdcAmount);
-    event BondingCurveEnded();
+    // event BondingCurveEnded();
     event ArtistFeesWithdrawn(address artist, uint256 amount);
     event ProtocolFeesPaid(uint256 amount);
-    event LiquidityAdded(uint256 amountToken, uint256 amountETH, uint256 liquidity);
+    // event LiquidityAdded(uint256 amountToken, uint256 amountETH, uint256 liquidity);
     event CrowdfundGoalUpdated(uint256 minimumGoal, uint256 maximumGoal);
 
     error Zero();
