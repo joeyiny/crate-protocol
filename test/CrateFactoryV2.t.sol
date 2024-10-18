@@ -45,71 +45,61 @@ contract CrateFactoryV2Test is TestUtils, ICrateV2 {
         assertEq(token.songURI(), songURI, "Song URI should match.");
     }
 
-    // function testCreateMultipleTokens() public {
-    //     // Test creating multiple tokens and ensure all are recorded correctly
-    //     uint256 numTokens = 5;
-    //     for (uint256 i = 0; i < numTokens; i++) {
-    //         IERC20(usdc).approve(address(factory), factory.launchCost());
-    //         string memory name = string(abi.encodePacked("Token", i));
-    //         string memory symbol = string(abi.encodePacked("SYM", i));
-    //         string memory songURI = string(abi.encodePacked("example.com", i));
+    function testCreateMultipleTokens() public {
+        // Test creating multiple tokens and ensure all are recorded correctly
+        uint256 numTokens = 5;
+        for (uint256 i = 0; i < numTokens; i++) {
+            IERC20(usdc).approve(address(factory), factory.launchCost());
+            string memory name = string(abi.encodePacked("Token", i));
+            string memory symbol = string(abi.encodePacked("SYM", i));
+            string memory songURI = string(abi.encodePacked("example.com", i));
+            bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
 
-    //         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
-    //         assertEq(factory.allTokens(i), tokenAddress, "Token address should be recorded in allTokens.");
-    //     }
-    // }
+            address tokenAddress = address(factory.createToken(name, symbol, songURI, salt, 5000e6));
 
-    // function testFailCreateTokenWithInsufficientEth() public {
-    //     // Attempt to create a token without sending enough ETH should fail
-    //     string memory name = "FailToken";
-    //     string memory symbol = "FTK";
-    //     string memory songURI = "example.com";
-    //     bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
+            assertEq(factory.allTokens(i), tokenAddress, "Token address should be recorded in allTokens.");
+        }
+    }
 
-    //     factory.createToken(name, symbol, songURI, salt, 5000e6); // Not enough ETH
-    // }
+    function testFailCreateTokenWithInsufficientUSDC() public {
+        // Attempt to create a token without sending enough USDC should fail
+        address alice = address(0x123);
+        vm.deal(alice, 1 ether);
+        deal(usdc, alice, 90 * 1e6);
+        vm.startPrank(alice);
 
-    // function testUpdateLaunchCostAndCreateToken() public {
-    //     // First, update the launch cost by the owner
-    //     uint256 newLaunchCost = 0.5 ether; // Updated launch cost
-    //     factory.updateLaunchCost(newLaunchCost);
-    //     assertEq(factory.launchCost(), newLaunchCost, "Launch cost should be updated to new value.");
+        IERC20(usdc).approve(address(factory), factory.launchCost());
 
-    //     // Initial balance of the tester
-    //     uint256 initialBalance = address(this).balance;
+        string memory name = "FailToken";
+        string memory symbol = "FTK";
+        string memory songURI = "example.com";
+        bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
 
-    //     //uint256 sentAmount = factory.launchCost();
+        factory.createToken(name, symbol, songURI, salt, 5000e6); // Not enough USDC
+        vm.stopPrank();
+    }
 
-    //     // Creating a token and sending more ETH than required
-    //     string memory name = "ExcessToken";
-    //     string memory symbol = "EXT";
-    //     string memory songURI = "example.com";
-    //     bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
+    function testUpdateLaunchCostAndCreateToken() public {
+        // First, update the launch cost by the owner
+        uint256 newLaunchCost = 400e6;
 
-    //     address tokenAddress = address(factory.createToken(name, symbol, songURI, salt, 5000e6));
+        factory.updateLaunchCost(newLaunchCost);
+        assertEq(factory.launchCost(), newLaunchCost, "Launch cost should be updated to new value.");
+    }
 
-    //     // Ensure the token is created
-    //     assertTrue(tokenAddress != address(0), "Token creation failed.");
+    function testFailSameSalt() public {
+        string memory name = "UniqueToken";
+        string memory symbol = "UNQ";
+        string memory songURI = "unique.com";
+        bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
 
-    //     // Ensure the excess ETH is refunded
-    //     uint256 finalBalance = address(this).balance;
-    //     uint256 expectedFinalBalance = initialBalance - factory.launchCost();
-    //     assertEq(finalBalance, expectedFinalBalance, "Excess ETH was not refunded correctly.");
-    // }
+        // First token creation should succeed
+        address firstClone = address(factory.createToken(name, symbol, songURI, salt, 5000e6));
+        assertTrue(firstClone != address(0), "First token creation failed");
 
-    // function testFailSameSalt() public {
-    //     string memory name = "UniqueToken";
-    //     string memory symbol = "UNQ";
-    //     string memory songURI = "unique.com";
-    //     bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
-
-    //     // First token creation should succeed
-    //     address firstClone = address(factory.createToken(name, symbol, songURI, salt, 5000e6));
-    //     assertTrue(firstClone != address(0), "First token creation failed");
-
-    //     // Second token creation with the same salt should fail
-    //     factory.createToken(name, symbol, songURI, salt, 5000e6);
-    // }
+        // Second token creation with the same salt should fail
+        factory.createToken(name, symbol, songURI, salt, 5000e6);
+    }
 
     receive() external payable {}
 }
