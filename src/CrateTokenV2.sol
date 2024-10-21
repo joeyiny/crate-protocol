@@ -131,9 +131,10 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     function buy(uint256 _usdcAmount) public nonReentrant onlyPhase(Phase.BONDING_CURVE) {
         if (_usdcAmount == 0) revert Zero();
         address sender = LibMulticaller.sender();
+        require(IERC20(usdcToken).balanceOf(sender) >= _usdcAmount, "USDC allowance too low");
         require(IERC20(usdcToken).allowance(sender, address(this)) >= _usdcAmount, "USDC allowance too low");
         uint256 numTokens = _calculateAmmTokenOut(_usdcAmount);
-        require(curve.tokenAmount >= numTokens, "Not enough tokens in curve");
+        require(curve.tokenAmount >= numTokens, "Not enough tokens in curve.");
         // Transfer USDC from sender to this contract
         bool success = IERC20(usdcToken).transferFrom(sender, address(this), _usdcAmount);
         require(success, "USDC transfer failed");
@@ -143,6 +144,20 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         //Transfer Tokens
         _transfer(address(this), sender, numTokens);
         emit TokenPurchase(sender, _usdcAmount, numTokens);
+    }
+
+    function sell(uint256 _tokenAmount) public nonReentrant onlyPhase(Phase.BONDING_CURVE) {
+        if (_tokenAmount == 0) revert Zero();
+        address sender = LibMulticaller.sender();
+        require(balanceOf(sender) >= _tokenAmount, "Insufficient token balance");
+        uint256 numUsdc = _calculateAmmUsdcOut(_tokenAmount);
+        require(curve.usdcAmount >= numUsdc, "Not enough liquidity.");
+        curve.tokenAmount += _tokenAmount;
+        curve.usdcAmount -= numUsdc;
+        _transfer(sender, address(this), _tokenAmount);
+        bool success = IERC20(usdcToken).transfer(sender, numUsdc);
+        require(success, "USDC transfer failed");
+        emit TokenSale(sender, _tokenAmount, numUsdc);
     }
 
     /**

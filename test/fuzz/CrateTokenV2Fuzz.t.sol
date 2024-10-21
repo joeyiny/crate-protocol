@@ -360,15 +360,11 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.startPrank(bob);
 
         IERC20(usdc).approve(address(token), 100_000 * 1e6);
-        console.log(token.balanceOf(bob));
 
         token.fund(5000 * 1e6);
-        console.log(token.balanceOf(bob));
         token.buy(5000 * 1e6);
-        console.log(token.balanceOf(bob));
 
         token.buy(10000 * 1e6);
-        console.log(token.balanceOf(bob));
 
         vm.stopPrank();
     }
@@ -397,8 +393,44 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         token.buy(1 * 1e6);
 
         uint256 bobTokenBalance = token.balanceOf(bob);
-        console.log(bobTokenBalance);
         assert(bobTokenBalance > 0);
+        vm.stopPrank();
+    }
+
+    function test_SellInBondingCurve() public {
+        // Set up the initial test conditions
+        vm.startPrank(bob);
+        uint256 fundingAmount = 5000 * 1e6;
+        uint256 bondingCurvePurchaseAmount = 5000 * 1e6;
+        IERC20(usdc).approve(address(token), 50_000 * 1e6);
+
+        // Fund the crowdfund to transition to the bonding curve phase
+        token.fund(fundingAmount);
+        uint256 bobInitialTokenBalance = token.balanceOf(bob);
+
+        // Bob buys tokens during the bonding curve phase
+        token.buy(bondingCurvePurchaseAmount);
+
+        // Record Bob's token balance and USDC balance after buying tokens
+        uint256 bobBondingCurveTokens = token.balanceOf(bob) - bobInitialTokenBalance;
+        uint256 bobUSDCBalanceBeforeSell = IERC20(usdc).balanceOf(bob);
+
+        // Bob sells half of the tokens acquired during the bonding curve phase
+        uint256 sellAmount = bobBondingCurveTokens / 2;
+        token.sell(sellAmount);
+
+        // Calculate expected balances after selling
+        uint256 bobTokenBalanceAfterSell = token.balanceOf(bob);
+        uint256 bobUSDCBalanceAfterSell = IERC20(usdc).balanceOf(bob);
+
+        // Assert that Bob's token balance is correct after the sale
+        uint256 expectedTokenBalance = bobInitialTokenBalance + (bobBondingCurveTokens - sellAmount);
+        assertEq(bobTokenBalanceAfterSell, expectedTokenBalance);
+
+        // Assert that Bob's USDC balance has increased after the sale
+        assertGt(bobUSDCBalanceAfterSell, bobUSDCBalanceBeforeSell);
+
+        // Stop the prank
         vm.stopPrank();
     }
 
