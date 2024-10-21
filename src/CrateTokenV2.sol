@@ -25,6 +25,8 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
 
     uint256 public tokensSold;
 
+    uint256 public constant CROWDFUND_DURATION = 604800; // 1 week in seconds.
+    uint256 public crowdfundStartTime;
 
     mapping(address => uint256) public crowdfundTokens; //This is the amount of tokens users have bought in the crowdfund phase. This is to handle crowdfund cancels/refunds.
     mapping(address => uint256) public amountPaid; //This is the amount of money users have sent in the crowdfund phase. This is to handle crowdfund cancels/refunds.
@@ -215,7 +217,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         curve.usdcAmount = 0;
         curve.virtualUsdcAmount = 5000e6;
         phase = Phase.BONDING_CURVE;
-        emit CrowdfundCompleted();
+        emit StartBondingCurve(curve.tokenAmount, curve.usdcAmount, curve.virtualUsdcAmount);
     }
 
     /// VIEW ///
