@@ -20,7 +20,7 @@ interface ICrateV2 {
     event Fund(address funder, uint256 usdcAmount, uint256 tokenAmount);
     event TokenPurchase(address buyer, uint256 usdcAmount, uint256 tokenAmount);
     event TokenSale(address seller, uint256 tokenAmount, uint256 usdcAmount);
-    event CrowdfundCompleted();
+    event StartBondingCurve(uint256 tokenReserve, uint256 realUsdcReserve, uint256 virtualUsdcReserve);
     event CrowdfundCanceled();
     event ClaimRefund(address user, uint256 usdcAmount);
     // event BondingCurveEnded();
