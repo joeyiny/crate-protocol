@@ -13,9 +13,7 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
  *     Users crowdfund and receive nontransferable tokens. Once the goal is hit, then the tokens become transferable and a market is launched for the tokens.
  */
 contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
-    uint256 private constant MAX_SUPPLY = 5_000e18;
-
-    uint256 public crowdfundGoal;
+    uint256 public crowdfundGoal; //This is in USDC price. (eg $5k = 5_000e6). Other variables are dependent on this one: max supply and initial token price.
 
     address public usdcToken;
     address public protocolFeeDestination;
@@ -24,6 +22,9 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     uint256 public artistCrowdfundFees; //The artist can only withdraw this when the crowdfund is complete.
     uint256 public protocolCrowdfundFees;
     uint256 public amountRaised;
+
+    uint256 public tokensSold;
+
 
     mapping(address => uint256) public crowdfundTokens; //This is the amount of tokens users have bought in the crowdfund phase. This is to handle crowdfund cancels/refunds.
     mapping(address => uint256) public amountPaid; //This is the amount of money users have sent in the crowdfund phase. This is to handle crowdfund cancels/refunds.
@@ -38,6 +39,14 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         _disableInitializers();
     }
 
+    struct BondingCurve {
+        uint256 tokenAmount;
+        uint256 usdcAmount;
+        uint256 virtualUsdcAmount;
+    }
+
+    BondingCurve public curve;
+
     function initialize(
         address _usdcToken,
         string memory _name,
@@ -48,27 +57,31 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         uint256 _crowdfundGoal
     ) public initializer {
         __ERC20_init(_name, _symbol);
-        _mint(address(this), MAX_SUPPLY);
         artistFeeDestination = _artistAddress;
         protocolFeeDestination = _protocolAddress;
         usdcToken = _usdcToken;
         phase = Phase.CROWDFUND;
         songURI = _songURI;
         crowdfundGoal = _crowdfundGoal;
+        crowdfundStartTime = block.timestamp;
+        _mint(address(this), getMaxSupply());
+    }
+
+    modifier onlyPhase(Phase _requiredPhase) {
+        require(phase == _requiredPhase, "Incorrect phase");
+        _;
     }
 
     /// PUBLIC ///
 
-    function fund(uint256 _usdcAmount) public nonReentrant {
+    function fund(uint256 _usdcAmount) public nonReentrant onlyPhase(Phase.CROWDFUND) {
         if (_usdcAmount == 0) revert Zero();
-        if (phase != Phase.CROWDFUND) revert WrongPhase();
 
         // Update phase
         // TODO: Handle the excess going into the bonding curve
         if (_usdcAmount + amountRaised >= crowdfundGoal) {
             _usdcAmount = crowdfundGoal - amountRaised;
-            phase = Phase.BONDING_CURVE;
-            emit CrowdfundCompleted();
+            _beginBondingCurve();
         }
 
         // Temporarily removed: TODO: Fix this and handle crowdfund being stuck issue
@@ -83,12 +96,13 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         require(success, "USDC transfer failed");
 
         // Calculate amount of tokens earned
-        uint256 numTokens = calculateTokenAmount(_usdcAmount);
+        uint256 numTokens = calculateTokenPurchaseAmount(_usdcAmount);
 
         //Handle global state manipulation
         amountRaised += _usdcAmount;
         crowdfundTokens[sender] += numTokens; //Keep track of how many tokens this user purchased in the bonding curve
         amountPaid[sender] += _usdcAmount;
+        tokensSold += numTokens;
 
         //Transfer Tokens
         _transfer(address(this), sender, numTokens);
@@ -114,7 +128,22 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         // require(IERC20(usdcToken).transfer(artistFeeDestination, artistFee), "Artist fee transfer failed");
     }
 
-    /// PRIVATE ///
+    function buy(uint256 _usdcAmount) public nonReentrant onlyPhase(Phase.BONDING_CURVE) {
+        if (_usdcAmount == 0) revert Zero();
+        address sender = LibMulticaller.sender();
+        require(IERC20(usdcToken).allowance(sender, address(this)) >= _usdcAmount, "USDC allowance too low");
+        uint256 numTokens = _calculateAmmTokenOut(_usdcAmount);
+        require(curve.tokenAmount >= numTokens, "Not enough tokens in curve");
+        // Transfer USDC from sender to this contract
+        bool success = IERC20(usdcToken).transferFrom(sender, address(this), _usdcAmount);
+        require(success, "USDC transfer failed");
+
+        curve.tokenAmount -= numTokens;
+        curve.usdcAmount += _usdcAmount;
+        //Transfer Tokens
+        _transfer(address(this), sender, numTokens);
+        emit TokenPurchase(sender, _usdcAmount, numTokens);
+    }
 
     /**
      * @notice Allows the cancellation of an ongoing crowdfund, providing refunds to all participants and preventing the distribution of tokens.
@@ -122,7 +151,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
      * @dev The purpose of this function is to improve the UX by offering a way to safely cancel a crowdfund when necessary.
      * Without this function, crowdfunds could be stuck in limbo if the goal is never met. Also, we need a protection against malicious activity.
      */
-    function cancelCrowdfund() external nonReentrant {
+    function cancelCrowdfund() external nonReentrant onlyPhase(Phase.CROWDFUND) {
         require(msg.sender == artistFeeDestination || msg.sender == protocolFeeDestination, "Not authorized.");
         require(phase == Phase.CROWDFUND, "This token is no longer in the Crowdfund phase, cannot cancel.");
 
@@ -164,16 +193,57 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         emit ArtistFeesWithdrawn(artistFeeDestination, fees);
     }
 
+    /// PRIVATE ///
+
+    function _beginBondingCurve() private onlyPhase(Phase.CROWDFUND) {
+        curve.tokenAmount = 1000e18;
+        curve.usdcAmount = 0;
+        curve.virtualUsdcAmount = 5000e6;
+        phase = Phase.BONDING_CURVE;
+        emit CrowdfundCompleted();
+    }
+
     /// VIEW ///
 
-    function calculateTokenAmount(uint256 _usdcAmount) public pure returns (uint256) {
-        uint256 donationPrice = getDonationPrice();
+    function calculateTokenPurchaseAmount(uint256 _usdcAmount) public view returns (uint256) {
+        uint256 donationPrice = getInitialPrice();
         uint256 tokenAmount = (_usdcAmount * 1e18) / donationPrice;
         return tokenAmount;
     }
 
-    function getDonationPrice() public pure returns (uint256) {
-        return 5 * 1e6; //$5 per copy
+    function getInitialPrice() public view returns (uint256) {
+        return crowdfundGoal / 1000; // eg, $5k goal means $5 token price.
+    }
+
+    function getCurrentPrice() public view returns (uint256) {
+        // Adjust USDC reserve to 18 decimals
+        uint256 usdcReserve = (curve.usdcAmount + curve.virtualUsdcAmount) * 1e12;
+        uint256 tokenReserve = curve.tokenAmount; // Already in 18 decimals
+
+        // Ensure token reserve is not zero to prevent division by zero
+        require(tokenReserve > 0, "Token reserve is zero");
+
+        // Price per token in USDC (18 decimals)
+        uint256 pricePerToken = usdcReserve / tokenReserve;
+
+        return pricePerToken; // This will be in 18 decimals
+    }
+
+    function _calculateAmmTokenOut(uint256 usdcIn) internal view returns (uint256) {
+        uint256 k = (curve.virtualUsdcAmount + curve.usdcAmount) * curve.tokenAmount;
+        uint256 newUsdcAmount = curve.virtualUsdcAmount + curve.usdcAmount + usdcIn;
+        return curve.tokenAmount - (k / newUsdcAmount);
+    }
+
+    function _calculateAmmUsdcOut(uint256 tokenIn) internal view returns (uint256) {
+        uint256 k = (curve.virtualUsdcAmount + curve.usdcAmount) * curve.tokenAmount;
+        uint256 newTokenAmount = curve.tokenAmount + tokenIn;
+        return (curve.virtualUsdcAmount + curve.usdcAmount) - (k / newTokenAmount);
+    }
+
+    // Function to calculate max supply based on the crowdfund goal.
+    function getMaxSupply() public view returns (uint256) {
+        return crowdfundGoal * 1e12; // Convert USDC (6 decimals) to max supply (18 decimals).
     }
 
     /// INTERNAL ///

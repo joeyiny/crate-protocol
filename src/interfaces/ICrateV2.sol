@@ -18,6 +18,7 @@ interface ICrateV2 {
 
     // event TokenTrade(address trader, uint256 tokenAmount, bool isPurchase, uint256 ethAmount);
     event Fund(address funder, uint256 usdcAmount, uint256 tokenAmount);
+    event TokenPurchase(address funder, uint256 usdcAmount, uint256 tokenAmount);
     event CrowdfundCompleted();
     event CrowdfundCanceled();
     event ClaimRefund(address user, uint256 usdcAmount);

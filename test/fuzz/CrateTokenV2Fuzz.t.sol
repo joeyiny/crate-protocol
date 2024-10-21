@@ -28,7 +28,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.deal(protocolOwner, 1000 ether);
         vm.deal(alice, 1 ether);
         vm.deal(bob, 1 ether);
-        deal(usdc, bob, 100_000 * 1e6);
+        deal(usdc, bob, 10_000_000 * 1e6);
         deal(usdc, alice, 100_000 * 1e6);
         deal(usdc, artist, 100_000 * 1e6);
 
@@ -68,7 +68,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
     function testFuzz_Donation(uint256 usdcAmount) public prank(bob) {
         uint256 initialUserBalance = IERC20(usdc).balanceOf(bob);
         usdcAmount = bound(usdcAmount, 1 * 1e6, 1000 * 1e6);
-        uint256 numTokens = token.calculateTokenAmount(usdcAmount);
+        uint256 numTokens = token.calculateTokenPurchaseAmount(usdcAmount);
         IERC20(usdc).approve(address(token), usdcAmount);
 
         vm.expectEmit(true, true, true, true);
@@ -86,6 +86,13 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
             "artist fees should have accumulated by 90%"
         );
         assertTrue(token.balanceOf(bob) == (usdcAmount * 1e18) / (5 * 1e6), "user should have earned tokens");
+    }
+
+    function testFail_DonationDuringWrongPhase(uint256 usdcAmount) public prank(bob) {
+        uint256 initialUserBalance = IERC20(usdc).balanceOf(bob);
+        IERC20(usdc).approve(address(token), 10_000e6);
+        token.fund(5000e6); //sell out the curve
+        token.fund(1);
     }
 
     function testFuzz_CompleteCrowdfund() public prank(bob) {
@@ -107,6 +114,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
     function test_CancelCrowdfund() public {
         // Bob participates in the crowdfund
         vm.startPrank(bob);
+        uint256 initialUserBalance = IERC20(usdc).balanceOf(bob);
         IERC20(usdc).approve(address(token), 100_000 * 1e6);
         token.fund(3000 * 1e6);
         vm.stopPrank();
@@ -128,7 +136,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.stopPrank();
 
         // Check that Bob's USDC was refunded correctly
-        assertEq(IERC20(usdc).balanceOf(bob), 100_000 * 1e6, "Bob should have received a full USDC refund");
+        assertEq(IERC20(usdc).balanceOf(bob), initialUserBalance, "Bob should have received a full USDC refund");
 
         // Verify that Bob's tokens were burned
         assertEq(token.balanceOf(bob), 0, "Bob's tokens should be burned");
@@ -192,17 +200,17 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         // Check initial balances and state before cancellation
         assertEq(
             token.balanceOf(alice),
-            token.calculateTokenAmount(218 * 1e6),
+            token.calculateTokenPurchaseAmount(218 * 1e6),
             "Alice's token balance should be correct before cancellation"
         );
         assertEq(
             token.balanceOf(bob),
-            token.calculateTokenAmount(1234 * 1e6),
+            token.calculateTokenPurchaseAmount(1234 * 1e6),
             "Bob's token balance should be correct before cancellation"
         );
         assertEq(
             token.balanceOf(charlie),
-            token.calculateTokenAmount(10 * 1e6),
+            token.calculateTokenPurchaseAmount(10 * 1e6),
             "Charlie's token balance should be correct before cancellation"
         );
 
@@ -212,17 +220,17 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
 
         assertEq(
             token.crowdfundTokens(alice),
-            token.calculateTokenAmount(218 * 1e6),
+            token.calculateTokenPurchaseAmount(218 * 1e6),
             "Alice's crowdfundTokens should be correct before cancellation"
         );
         assertEq(
             token.crowdfundTokens(bob),
-            token.calculateTokenAmount(1234 * 1e6),
+            token.calculateTokenPurchaseAmount(1234 * 1e6),
             "Bob's crowdfundTokens should be correct before cancellation"
         );
         assertEq(
             token.crowdfundTokens(charlie),
-            token.calculateTokenAmount(10 * 1e6),
+            token.calculateTokenPurchaseAmount(10 * 1e6),
             "Charlie's crowdfundTokens should be correct before cancellation"
         );
 
@@ -337,12 +345,61 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
     }
 
     function testFail_CancelCrowdfund_NotInCrowdfundPhase() public {
+        vm.startPrank(artist);
+
         // Transition the phase to BONDING_CURVE to simulate an active phase
         IERC20(usdc).approve(address(token), 100_000 * 1e6);
         token.fund(5000 * 1e6); // Reaching the crowdfund goal to move to the BONDING_CURVE phase
 
         // Attempt to cancel crowdfund in BONDING_CURVE phase, which should revert
         token.cancelCrowdfund();
+        vm.stopPrank();
+    }
+
+    function test_PurchaseInBondingCurve() public {
+        vm.startPrank(bob);
+
+        IERC20(usdc).approve(address(token), 100_000 * 1e6);
+        console.log(token.balanceOf(bob));
+
+        token.fund(5000 * 1e6);
+        console.log(token.balanceOf(bob));
+        token.buy(5000 * 1e6);
+        console.log(token.balanceOf(bob));
+
+        token.buy(10000 * 1e6);
+        console.log(token.balanceOf(bob));
+
+        vm.stopPrank();
+    }
+
+    function testFail_PurchaseInBondingCurve_WrongPhase() public {
+        vm.startPrank(bob);
+
+        IERC20(usdc).approve(address(token), 100_000 * 1e6);
+
+        token.fund(4999 * 1e6);
+        token.buy(1 * 1e6);
+        vm.stopPrank();
+    }
+
+    function test_BondingCurve_LargePurchase() public {
+        vm.startPrank(alice);
+
+        IERC20(usdc).approve(address(token), 3_000_000 * 1e6); // Approve $1,000,000 USDC
+        token.fund(5000 * 1e6); // Complete crowdfund
+        token.buy(100 * 1e6);
+
+        vm.stopPrank();
+        vm.startPrank(bob);
+        IERC20(usdc).approve(address(token), 3_000_000 * 1e6); // Approve $1,000,000 USDC
+
+        token.buy(1 * 1e6);
+
+        uint256 bobTokenBalance = token.balanceOf(bob);
+        console.log(bobTokenBalance);
+        assert(bobTokenBalance > 0);
+        vm.stopPrank();
     }
 
     // function testFailFuzz_Donation(uint256 usdcAmount) public prank(bob) {
