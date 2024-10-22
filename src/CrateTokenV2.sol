@@ -25,6 +25,8 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
 
     uint256 public tokensSold;
 
+    uint256 public constant CROWDFUND_DURATION = 604800; // 1 week in seconds.
+    uint256 public crowdfundStartTime;
 
     mapping(address => uint256) public crowdfundTokens; //This is the amount of tokens users have bought in the crowdfund phase. This is to handle crowdfund cancels/refunds.
     mapping(address => uint256) public amountPaid; //This is the amount of money users have sent in the crowdfund phase. This is to handle crowdfund cancels/refunds.
@@ -231,7 +233,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     }
 
     function getCurrentPrice() public view returns (uint256) {
-        // Adjust USDC reserve to 18 decimals
+        // Adjust USDC reserve to 18 decimals (from 6 decimals in USDC)
         uint256 usdcReserve = (curve.usdcAmount + curve.virtualUsdcAmount) * 1e12;
         uint256 tokenReserve = curve.tokenAmount; // Already in 18 decimals
 
@@ -239,7 +241,8 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         require(tokenReserve > 0, "Token reserve is zero");
 
         // Price per token in USDC (18 decimals)
-        uint256 pricePerToken = usdcReserve / tokenReserve;
+        // Multiply by 1e18 to preserve precision before dividing
+        uint256 pricePerToken = (usdcReserve * 1e18) / tokenReserve;
 
         return pricePerToken; // This will be in 18 decimals
     }
