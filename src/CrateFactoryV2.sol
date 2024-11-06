@@ -23,7 +23,7 @@ contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
     event ProtocolFeesWithdrawn(uint256 amount);
 
     constructor(address _usdcToken) Ownable(msg.sender) {
-        launchCost = 99e6; // $99 in USDC TODO: Add feature to get this back
+        launchCost = 19e6;
         usdcToken = _usdcToken;
         tokenImplementation = address(new CrateTokenV2());
     }

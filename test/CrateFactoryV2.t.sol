@@ -65,7 +65,7 @@ contract CrateFactoryV2Test is TestUtils, ICrateV2 {
         // Attempt to create a token without sending enough USDC should fail
         address alice = address(0x123);
         vm.deal(alice, 1 ether);
-        deal(usdc, alice, 90 * 1e6);
+        deal(usdc, alice, 1 * 1e6);
         vm.startPrank(alice);
 
         IERC20(usdc).approve(address(factory), factory.launchCost());
