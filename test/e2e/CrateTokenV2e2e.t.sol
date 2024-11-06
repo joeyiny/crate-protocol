@@ -42,6 +42,41 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.stopPrank();
     }
 
+    function test_UpdateLaunchCost() public {
+        uint256 newLaunchCost = 25e6; // $25 
+        
+        deal(usdc, alice, 100_000 * 1e6);
+        // Non-owner should fail
+        vm.startPrank(alice);
+        vm.expectRevert();
+        factory.updateLaunchCost(newLaunchCost);
+        vm.stopPrank();
+        
+        // Owner should succeed
+        vm.startPrank(owner);
+        factory.updateLaunchCost(newLaunchCost);
+        vm.stopPrank();
+        
+        assertEq(factory.launchCost(), newLaunchCost, "Launch cost not updated correctly");
+        
+        // Verify new cost is required for token creation
+        vm.startPrank(alice);
+        string memory name = "TestToken";
+        string memory symbol = "TTK";
+        string memory songURI = "example.com";
+        bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
+        
+        // Should fail with old launch cost amount
+        IERC20(usdc).approve(address(factory), 19e6);
+        vm.expectRevert();
+        factory.createToken(name, symbol, songURI, salt, 5000e6);
+        
+        // Should succeed with new launch cost amount
+        IERC20(usdc).approve(address(factory), 25e6);
+        factory.createToken(name, symbol, songURI, salt, 5000e6);
+        vm.stopPrank();
+    }
+
     function test_CreateTokenWithValidCrowdfundGoal() public {
         uint256 validGoal = 10_000e6; // $10,000
         vm.startPrank(owner);
@@ -162,7 +197,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.stopPrank();
 
         vm.startPrank(owner);
-        assertEq(IERC20(usdc).balanceOf(address(factory)), 500e6 + 99e6, "Protocol fees are not correct"); //includes $99 launchfee
+        assertEq(IERC20(usdc).balanceOf(address(factory)), 500e6 + 19e6, "Protocol fees are not correct"); //includes $99 launchfee
 
         factory.withdraw();
         assertEq(IERC20(usdc).balanceOf(address(factory)), 0, "Protocol fees are were not withdrawn");
