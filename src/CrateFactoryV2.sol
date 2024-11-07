@@ -14,8 +14,8 @@ contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
     address public immutable usdcToken;
     address immutable tokenImplementation;
 
-    uint256 public minCrowdfundGoal = 1000e6; // $1000 in USDC (minimum)
     uint256 public maxCrowdfundGoal = 100_000e6; // $100,000 in USDC (maximum)
+    uint256 public minCrowdfundGoal = 100e6; // $100 in USDC (minimum)
 
     address[] public allTokens;
     uint256 public launchCost;
