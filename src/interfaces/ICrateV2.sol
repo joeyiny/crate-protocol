@@ -12,7 +12,6 @@ interface ICrateV2 {
     enum Phase {
         CROWDFUND,
         BONDING_CURVE,
-        MARKET,
         CANCELED
     }
 
