@@ -79,45 +79,44 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     function fund(uint256 _usdcAmount) public nonReentrant onlyPhase(Phase.CROWDFUND) {
         if (_usdcAmount == 0) revert Zero();
 
+        uint256 amountNeeded = _usdcAmount;
         // Update phase
         // TODO: Handle the excess going into the bonding curve
         if (_usdcAmount + amountRaised >= crowdfundGoal) {
-            _usdcAmount = crowdfundGoal - amountRaised;
+            amountNeeded = crowdfundGoal - amountRaised;
             _beginBondingCurve();
         }
 
         // Temporarily removed: TODO: Fix this and handle crowdfund being stuck issue
-        // require(_usdcAmount >= 1 * 1e6, "Cannot pay less than $1");
         address sender = LibMulticaller.sender();
+        // require(_usdcAmount >= 1 * 1e6, "Cannot pay less than $1");
 
         // User must approve the contract to transfer USDC on their behalf
-        require(IERC20(usdcToken).allowance(sender, address(this)) >= _usdcAmount, "USDC allowance too low");
+        require(IERC20(usdcToken).allowance(sender, address(this)) >= amountNeeded, "USDC allowance too low");
 
         // Transfer USDC from sender to this contract
-        bool success = IERC20(usdcToken).transferFrom(sender, address(this), _usdcAmount);
+        bool success = IERC20(usdcToken).transferFrom(sender, address(this), amountNeeded);
         require(success, "USDC transfer failed");
 
         // Calculate amount of tokens earned
-        uint256 numTokens = calculateTokenPurchaseAmount(_usdcAmount);
+        uint256 numTokens = calculateTokenPurchaseAmount(amountNeeded);
 
         //Handle global state manipulation
-        amountRaised += _usdcAmount;
+        amountRaised += amountNeeded;
         crowdfundTokens[sender] += numTokens; //Keep track of how many tokens this user purchased in the bonding curve
-        amountPaid[sender] += _usdcAmount;
+        amountPaid[sender] += amountNeeded;
         tokensSold += numTokens;
 
         //Transfer Tokens
         _transfer(address(this), sender, numTokens);
 
         // Calculate fees
-        uint256 protocolFee = (_usdcAmount * 10) / 100;
-        uint256 artistFee = _usdcAmount - protocolFee;
+        uint256 protocolFee = (amountNeeded * 10) / 100;
+        uint256 artistFee = amountNeeded - protocolFee;
 
         artistCrowdfundFees += artistFee;
         protocolCrowdfundFees += protocolFee;
 
-        // TODO: Switch pattern to accumulate/withdraw
-        // require(IERC20(usdcToken).transfer(protocolFeeDestination, crateFee), "Crate fee transfer failed");
         if (phase == Phase.BONDING_CURVE) {
             if (protocolCrowdfundFees > 0) {
                 bool protocolFeePaid = IERC20(usdcToken).transfer(protocolFeeDestination, protocolCrowdfundFees);
@@ -126,8 +125,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
                 protocolCrowdfundFees = 0;
             }
         }
-        emit Fund(sender, _usdcAmount, numTokens);
-        // require(IERC20(usdcToken).transfer(artistFeeDestination, artistFee), "Artist fee transfer failed");
+        emit Fund(sender, amountNeeded, numTokens);
     }
 
     function buy(uint256 _usdcAmount) public nonReentrant onlyPhase(Phase.BONDING_CURVE) {
