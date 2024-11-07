@@ -37,17 +37,10 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
 
     mapping(address => bool) public refundClaimed;
 
+    BondingCurve public curve;
     constructor() {
         _disableInitializers();
     }
-
-    struct BondingCurve {
-        uint256 tokenAmount;
-        uint256 usdcAmount;
-        uint256 virtualUsdcAmount;
-    }
-
-    BondingCurve public curve;
 
     function initialize(
         address _usdcToken,
