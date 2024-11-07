@@ -13,31 +13,28 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
  *     Users crowdfund and receive nontransferable tokens. Once the goal is hit, then the tokens become transferable and a market is launched for the tokens.
  */
 contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
-    uint256 public crowdfundGoal; //This is in USDC price. (eg $5k = 5_000e6). Other variables are dependent on this one: max supply and initial token price.
-
+    //IMMUTABLE
     address public usdcToken;
     address public protocolFeeDestination;
     address public artistFeeDestination;
+    string public songURI;
+    uint256 public crowdfundGoal; // USDC with 6 decimals.
 
+    //CROWDFUND
+    Phase public phase;
     uint256 public artistCrowdfundFees; //The artist can only withdraw this when the crowdfund is complete.
     uint256 public protocolCrowdfundFees;
     uint256 public amountRaised;
-
     uint256 public tokensSold;
 
-    uint256 public constant CROWDFUND_DURATION = 604800; // 1 week in seconds.
-    uint256 public crowdfundStartTime;
-
+    //USERS
     mapping(address => uint256) public crowdfundTokens; //This is the amount of tokens users have bought in the crowdfund phase. This is to handle crowdfund cancels/refunds.
     mapping(address => uint256) public amountPaid; //This is the amount of money users have sent in the crowdfund phase. This is to handle crowdfund cancels/refunds.
-
-    string public songURI;
-
-    Phase public phase;
-
     mapping(address => bool) public refundClaimed;
 
+    //AMM
     BondingCurve public curve;
+
     constructor() {
         _disableInitializers();
     }
