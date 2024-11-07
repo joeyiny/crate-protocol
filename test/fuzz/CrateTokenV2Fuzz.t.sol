@@ -150,6 +150,26 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         assertEq(token.crowdfundTokens(bob), 0, "Bob's crowdfundTokens should be reset to zero");
     }
 
+    function test_CancelCrowdfundFail_WrongPhase() public {
+        // First fund enough to move out of crowdfund phase
+        vm.startPrank(bob);
+        IERC20(usdc).approve(address(token), 100_000 * 1e6);
+        token.fund(5000 * 1e6); // This moves us to bonding curve phase
+        vm.stopPrank();
+
+        // Verify we're in bonding curve phase
+        assertEq(uint256(token.phase()), uint256(Phase.BONDING_CURVE), "Should be in bonding curve phase");
+
+        // Try to cancel crowdfund - should fail
+        vm.startPrank(artist);
+        vm.expectRevert("Incorrect phase");
+        token.cancelCrowdfund();
+        vm.stopPrank();
+
+        // Verify we're still in bonding curve phase
+        assertEq(uint256(token.phase()), uint256(Phase.BONDING_CURVE), "Should still be in bonding curve phase");
+    }
+
     function test_CancelCrowdfund_MultipleUsers() public {
         address charlie = address(0x789);
 
