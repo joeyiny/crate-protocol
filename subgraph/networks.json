@@ -1,8 +1,0 @@
-{
-  "base-sepolia": {
-    "CrateFactoryV1": {
-      "address": "0xff09a697ef2cf166ada3ca17c5c630d215af0dea",
-      "startBlock": 9542851
-    }
-  }
-}
