@@ -4,7 +4,6 @@ pragma solidity ^0.8.24;
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {LibMulticaller} from "@multicaller/LibMulticaller.sol";
 import {CrateFactoryV2} from "./CrateFactoryV2.sol";
 import {CrateTokenV2} from "./CrateTokenV2.sol";
 import {ICrateV2} from "./interfaces/ICrateV2.sol";
@@ -35,7 +34,7 @@ contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
         bytes32 salt,
         uint256 crowdfundGoal
     ) public nonReentrant returns (address) {
-        address sender = LibMulticaller.sender();
+        address sender = msg.sender;
 
         if (crowdfundGoal < minCrowdfundGoal || crowdfundGoal > maxCrowdfundGoal) {
             revert InvalidCrowdfundGoal();
