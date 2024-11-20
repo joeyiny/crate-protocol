@@ -10,7 +10,7 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 /**
  * This is a crowdfunded token launch.
- *     Users crowdfund and receive nontransferable tokens. Once the goal is hit, then the tokens become transferable and a market is launched for the tokens.
+ * Users crowdfund and receive nontransferable tokens. Once the goal is hit, then the tokens become transferable and a market is launched for the tokens.
  */
 contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     //IMMUTABLE
@@ -55,8 +55,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         phase = Phase.CROWDFUND;
         songURI = _songURI;
         crowdfundGoal = _crowdfundGoal;
-        crowdfundStartTime = block.timestamp;
-        _mint(address(this), getMaxSupply());
+        _mint(address(this), 1500e18);
     }
 
     modifier onlyPhase(Phase _requiredPhase) {
@@ -77,9 +76,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
             _beginBondingCurve();
         }
 
-        // Temporarily removed: TODO: Fix this and handle crowdfund being stuck issue
         address sender = LibMulticaller.sender();
-        // require(_usdcAmount >= 1 * 1e6, "Cannot pay less than $1");
 
         // User must approve the contract to transfer USDC on their behalf
         require(IERC20(usdcToken).allowance(sender, address(this)) >= amountNeeded, "USDC allowance too low");
@@ -91,9 +88,8 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         // Calculate amount of tokens earned
         uint256 numTokens = calculateTokenPurchaseAmount(amountNeeded);
 
-        //Handle global state manipulation
         amountRaised += amountNeeded;
-        crowdfundTokens[sender] += numTokens; //Keep track of how many tokens this user purchased in the bonding curve
+        crowdfundTokens[sender] += numTokens;
         amountPaid[sender] += amountNeeded;
         tokensSold += numTokens;
 
@@ -201,38 +197,44 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     /// PRIVATE ///
 
     function _beginBondingCurve() private onlyPhase(Phase.CROWDFUND) {
-        curve.tokenAmount = 1000e18;
+        uint256 virtualUsdc = 2000e6;
+        curve.tokenAmount = 400e18;
         curve.usdcAmount = 0;
-        curve.virtualUsdcAmount = 5000e6;
+        curve.virtualUsdcAmount = virtualUsdc;
         phase = Phase.BONDING_CURVE;
         emit StartBondingCurve(curve.tokenAmount, curve.usdcAmount, curve.virtualUsdcAmount);
     }
 
     /// VIEW ///
 
-    function calculateTokenPurchaseAmount(uint256 _usdcAmount) public view returns (uint256) {
-        uint256 donationPrice = getInitialPrice();
-        uint256 tokenAmount = (_usdcAmount * 1e18) / donationPrice;
+    function calculateTokenPurchaseAmount(uint256 _usdcAmount) public pure returns (uint256) {
+        uint256 initialPrice = getInitialPrice();
+        uint256 tokenAmount = (_usdcAmount * 1e18) / initialPrice;
         return tokenAmount;
     }
 
-    function getInitialPrice() public view returns (uint256) {
-        return crowdfundGoal / 1000; // eg, $5k goal means $5 token price.
+    function getInitialPrice() public pure returns (uint256) {
+        return 5e6; // $5 per token
     }
 
     function getCurrentPrice() public view returns (uint256) {
-        // Adjust USDC reserve to 18 decimals (from 6 decimals in USDC)
-        uint256 usdcReserve = (curve.usdcAmount + curve.virtualUsdcAmount) * 1e12;
-        uint256 tokenReserve = curve.tokenAmount; // Already in 18 decimals
+        // Get USDC reserve in its native 6 decimals
+        uint256 usdcReserve = curve.usdcAmount + curve.virtualUsdcAmount;
+        // Token reserve in 18 decimals
+        uint256 tokenReserve = curve.tokenAmount;
 
         // Ensure token reserve is not zero to prevent division by zero
         require(tokenReserve > 0, "Token reserve is zero");
 
-        // Price per token in USDC (18 decimals)
-        // Multiply by 1e18 to preserve precision before dividing
+        // Price calculation:
+        // We want price in USDC (6 decimals) per whole token (18 decimals)
+        // To maintain precision while accounting for token's 18 decimals:
+        // 1. Multiply USDC by 1e18 for precision
+        // 2. Divide by tokenReserve (18 decimals)
+        // Final result will be in 6 decimals (USDC's native decimals)
         uint256 pricePerToken = (usdcReserve * 1e18) / tokenReserve;
 
-        return pricePerToken; // This will be in 18 decimals
+        return pricePerToken; // Returns price in USDC's 6 decimal precision
     }
 
     function _calculateAmmTokenOut(uint256 usdcIn) internal view returns (uint256) {
@@ -247,11 +249,6 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         return (curve.virtualUsdcAmount + curve.usdcAmount) - (k / newTokenAmount);
     }
 
-    // Function to calculate max supply based on the crowdfund goal.
-    function getMaxSupply() public view returns (uint256) {
-        return crowdfundGoal * 1e12; // Convert USDC (6 decimals) to max supply (18 decimals).
-    }
-
     /// INTERNAL ///
 
     function _update(address from, address to, uint256 value) internal override {
@@ -260,8 +257,9 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
             super._update(from, to, value);
             return;
         }
-        // only allow general transfers in market phase
-        if (from != address(this) && to != address(this) && (phase != Phase.MARKET)) revert WrongPhase();
+
+        // market phase doesn't yet exist in this protocol version
+        // if (from != address(this) && to != address(this) && (phase != Phase.MARKET)) revert WrongPhase();
         super._update(from, to, value);
     }
 }
