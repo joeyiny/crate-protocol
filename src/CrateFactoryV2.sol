@@ -11,7 +11,7 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
     address public immutable usdcToken;
-    address immutable tokenImplementation;
+    address private tokenImplementation;
 
     uint256 public maxCrowdfundGoal = 100_000e6; // $100,000 in USDC (maximum)
     uint256 public minCrowdfundGoal = 100e6; // $100 in USDC (minimum)
@@ -20,6 +20,7 @@ contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
     uint256 public launchCost;
 
     event ProtocolFeesWithdrawn(uint256 amount);
+    event TokenImplementationUpdated(address newImplementation);
 
     constructor(address _usdcToken) Ownable(msg.sender) {
         launchCost = 19e6;
@@ -91,6 +92,13 @@ contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
         bool sent = IERC20(usdcToken).transfer(msg.sender, balance);
         if (!sent) revert TransferFailed();
         emit ProtocolFeesWithdrawn(balance);
+    }
+
+    function updateTokenImplementation(address newImplementation) external onlyOwner {
+        require(newImplementation != address(0), "Invalid implementation");
+        require(newImplementation.code.length > 0, "Not a contract");
+        tokenImplementation = newImplementation;
+        emit TokenImplementationUpdated(newImplementation);
     }
 
     receive() external payable {}

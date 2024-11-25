@@ -42,6 +42,39 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.stopPrank();
     }
 
+    function test_UpdateTokenImplementation() public {
+        address newImplementation = address(new CrateTokenV2());
+        
+        // Non-owner should fail
+        vm.startPrank(alice);
+        vm.expectRevert();
+        factory.updateTokenImplementation(newImplementation);
+        vm.stopPrank();
+        
+        // Zero address should fail
+        vm.startPrank(owner);
+        vm.expectRevert("Invalid implementation");
+        factory.updateTokenImplementation(address(0));
+        
+        // Non-contract address should fail
+        vm.expectRevert("Not a contract");
+        factory.updateTokenImplementation(address(0x123));
+        
+        // Valid implementation should succeed
+        factory.updateTokenImplementation(newImplementation);
+        
+        // Verify new implementation works by creating a token
+        string memory name = "NewImplToken";
+        string memory symbol = "NIT";
+        string memory songURI = "example.com/new";
+        bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
+        IERC20(usdc).approve(address(factory), factory.launchCost());
+        address tokenAddress = factory.createToken(name, symbol, songURI, salt, 5000e6);
+        
+        assertTrue(tokenAddress != address(0), "Token creation with new implementation failed");
+        vm.stopPrank();
+    }
+
     function test_UpdateLaunchCost() public {
         uint256 newLaunchCost = 25e6; // $25 
         
