@@ -268,14 +268,31 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     /// INTERNAL ///
 
     function _update(address from, address to, uint256 value) internal override {
-        //tokens can be burned if crowdfund is canceled
-        if (to == address(0) && phase == Phase.CANCELED) {
-            super._update(from, to, value);
-            return;
+        if (phase == Phase.CROWDFUND) {
+            // Allow only transfers from the contract (e.g., distributing tokens to funders)
+            if (from == address(this) || from == address(0)) {
+                super._update(from, to, value);
+                return;
+            } else {
+                revert("Transfers not allowed during crowdfund phase");
+            }
+        } else if (phase == Phase.CANCELED) {
+            //tokens can be burned if crowdfund is canceled
+            if (to == address(0) || to == address(this)) {
+                super._update(from, to, value);
+                return;
+            } else {
+                revert("Transfers not allowed during canceled phase");
+            }
+        } else if (phase == Phase.BONDING_CURVE) {
+            if (from == address(this) || from == address(0) || to == address(0) || to == address(this)) {
+                super._update(from, to, value);
+                return;
+            } else {
+                revert("Transfers not allowed during bonding curve phase");
+            }
+        } else {
+            revert("Transfers not allowed during pending phase");
         }
-
-        // market phase doesn't yet exist in this protocol version
-        // if (from != address(this) && to != address(this) && (phase != Phase.MARKET)) revert WrongPhase();
-        super._update(from, to, value);
     }
 }
