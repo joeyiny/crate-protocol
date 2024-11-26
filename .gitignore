@@ -6,3 +6,4 @@ broadcast
 .env
 Crate.code-workspace
 lcov.info
+coverage

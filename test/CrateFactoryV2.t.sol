@@ -101,5 +101,6 @@ contract CrateFactoryV2Test is TestUtils, ICrateV2 {
         factory.createToken(name, symbol, songURI, salt, 5000e6);
     }
 
+
     receive() external payable {}
 }

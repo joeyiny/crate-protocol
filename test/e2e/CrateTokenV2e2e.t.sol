@@ -75,6 +75,51 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.stopPrank();
     }
 
+    function test_CrateTokenAddress() public {
+        // Test prediction before token exists
+        string memory name = "PredictToken";
+        string memory symbol = "PRED";
+        string memory songURI = "example.com/predict";
+        bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
+        
+        (address predicted, bool exists) = factory.crateTokenAddress(bob, salt);
+        assertFalse(exists, "Token should not exist yet");
+        
+        // Create token
+        vm.startPrank(bob);
+        IERC20(usdc).approve(address(factory), factory.launchCost());
+        address actual = factory.createToken(name, symbol, songURI, salt, 5000e6);
+        vm.stopPrank();
+        
+        // Verify prediction was correct
+        assertEq(predicted, actual, "Predicted address should match actual");
+        
+        // Check exists flag after creation
+        (address addr, bool shouldExist) = factory.crateTokenAddress(bob, salt);
+        assertTrue(shouldExist, "Token should now exist");
+        assertEq(addr, actual, "Address should match");
+    }
+
+    function test_InvalidCrowdfundGoals() public {
+        vm.startPrank(owner);
+        // Test too low
+        vm.expectRevert(ICrateV2.InvalidCrowdfundGoal.selector);
+        factory.createToken("Test", "TST", "uri", bytes32(0),  9e6);
+        vm.expectRevert(ICrateV2.InvalidCrowdfundGoal.selector);
+        factory.createToken("Test", "TST", "uri", bytes32(0),  1);
+        vm.expectRevert(ICrateV2.InvalidCrowdfundGoal.selector);
+        factory.createToken("Test", "TST", "uri", bytes32(0),  0);
+        
+        // Test too high
+        vm.expectRevert(ICrateV2.InvalidCrowdfundGoal.selector);
+        factory.createToken("Test", "TST", "uri", bytes32(0), 101000e6);
+
+        vm.expectRevert("Invalid goal limits");
+        factory.updateCrowdfundGoalLimits(1001e6, 1000e6);
+
+    }
+
+
     function test_UpdateLaunchCost() public {
         uint256 newLaunchCost = 25e6; // $25 
         
@@ -264,6 +309,35 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         token.fund(5000 * 1e6);
         token.withdrawArtistFees();
         vm.stopPrank();
+    }
+
+
+    //Token shouldn't be created if the USDC transfer fails
+    function test_UsdcTransferFail() public {
+        MockUSDC(usdc).setFailTransfers(true);
+        MockUSDC(usdc).approve(address(factory), factory.launchCost());
+        vm.expectRevert();
+        factory.createToken("Test", "TST", "uri", bytes32(0), 5000e6);
+        MockUSDC(usdc).setFailTransfers(false);
+
+    }
+
+
+    //Token shouldn't be created if the USDC transfer fails
+    function test_UsdcTransferFail_WithdrawProtocol_Fees() public {
+        
+        vm.startPrank(bob);
+
+        IERC20(usdc).approve(address(token), 100_000 * 1e6);
+        token.fund(5000 * 1e6);
+        vm.stopPrank();
+
+        vm.startPrank(owner);
+
+        factory.approveTokenCrowdfund(address(token));
+        MockUSDC(usdc).setFailTransfers(true);
+        vm.expectRevert();
+        factory.withdraw();
     }
 
     // function testEndBondingCurveAndAddLiquidity() public prank(bob) {
