@@ -17,7 +17,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
     address uniswapRouter = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24; //Router on Base
     address usdc = address(new MockUSDC());
     address artist = address(0x420);
-    address protocolOwner = address(0xb39);
+    address owner = address(0xb39);
     address alice = address(0x123);
     address bob = address(0x456);
     // address protocolFeeAddress = address(0x789);
@@ -25,14 +25,14 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
 
     function setUp() public {
         vm.deal(artist, 1 ether);
-        vm.deal(protocolOwner, 1000 ether);
+        vm.deal(owner, 1000 ether);
         vm.deal(alice, 1 ether);
         vm.deal(bob, 1 ether);
         deal(usdc, bob, 10_000_000 * 1e6);
         deal(usdc, alice, 100_000 * 1e6);
         deal(usdc, artist, 100_000 * 1e6);
 
-        vm.startPrank(protocolOwner);
+        vm.startPrank(owner);
         factory = new CrateFactoryV2(usdc);
         vm.stopPrank();
         vm.startPrank(artist);
@@ -95,7 +95,8 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         token.fund(1);
     }
 
-    function testFuzz_CompleteCrowdfund() public prank(bob) {
+    function testFuzz_CompleteCrowdfund() public {
+        vm.startPrank(bob);
         assertTrue(token.phase() == Phase.CROWDFUND, "Should start in crowdfund phase");
 
         IERC20(usdc).approve(address(token), 100_000 * 1e6);
@@ -106,9 +107,14 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
 
         token.fund(2000 * 1e6);
 
-        assertTrue(token.phase() == Phase.BONDING_CURVE, "Should now be in bonding curve phase");
+        assertTrue(token.phase() == Phase.PENDING, "Should now be in pending phase");
         assertTrue(token.balanceOf(bob) == (1000 * 1e18));
         assertTrue(token.crowdfundTokens(bob) == (1000 * 1e18));
+        vm.stopPrank();
+        vm.startPrank(owner);
+        factory.approveTokenCrowdfund(address(token));
+        assertTrue(token.phase() == Phase.BONDING_CURVE, "Should now be in bonding curve phase");
+        vm.stopPrank();
     }
 
     function test_CancelCrowdfund() public {
@@ -158,11 +164,14 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.stopPrank();
 
         // Verify we're in bonding curve phase
-        assertEq(uint256(token.phase()), uint256(Phase.BONDING_CURVE), "Should be in bonding curve phase");
+        assertEq(uint256(token.phase()), uint256(Phase.PENDING), "Should be in pending phase");
 
+        vm.startPrank(owner);
+        factory.approveTokenCrowdfund(address(token));
+        vm.stopPrank();
         // Try to cancel crowdfund - should fail
         vm.startPrank(artist);
-        vm.expectRevert("Incorrect phase");
+        vm.expectRevert("This token is not in the correct phase, cannot cancel.");
         token.cancelCrowdfund();
         vm.stopPrank();
 
@@ -359,19 +368,22 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         IERC20(usdc).approve(address(token), 100_000 * 1e6);
         token.fund(200 * 1e6);
         vm.stopPrank();
-        vm.startPrank(protocolOwner);
+        vm.startPrank(owner);
         factory.cancelTokenCrowdfund(address(token));
         vm.stopPrank();
     }
 
-    function testFail_CancelCrowdfund_NotInCrowdfundPhase() public {
+    function testFail_CancelCrowdfund_WrongPhase() public {
         vm.startPrank(artist);
 
         // Transition the phase to BONDING_CURVE to simulate an active phase
         IERC20(usdc).approve(address(token), 100_000 * 1e6);
-        token.fund(5000 * 1e6); // Reaching the crowdfund goal to move to the BONDING_CURVE phase
-
-        // Attempt to cancel crowdfund in BONDING_CURVE phase, which should revert
+        token.fund(5000 * 1e6);
+        vm.stopPrank();
+        vm.startPrank(owner);
+        factory.approveTokenCrowdfund(address(token));
+        vm.stopPrank();
+        vm.startPrank(artist);
         token.cancelCrowdfund();
         vm.stopPrank();
     }
@@ -382,9 +394,15 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         IERC20(usdc).approve(address(token), 100_000 * 1e6);
 
         token.fund(5000 * 1e6);
+        vm.expectRevert("Incorrect phase");
         token.buy(5000 * 1e6);
-
+        vm.stopPrank();
+        vm.startPrank(owner);
+        factory.approveTokenCrowdfund(address(token));
+        vm.stopPrank();
+        vm.startPrank(bob);
         token.buy(10000 * 1e6);
+        token.buy(12000 * 1e6);
 
         vm.stopPrank();
     }
@@ -404,8 +422,12 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
 
         IERC20(usdc).approve(address(token), 3_000_000 * 1e6); // Approve $1,000,000 USDC
         token.fund(5000 * 1e6); // Complete crowdfund
+        vm.expectRevert("Incorrect phase");
         token.buy(100 * 1e6);
 
+        vm.stopPrank();
+          vm.startPrank(owner);
+        factory.approveTokenCrowdfund(address(token));
         vm.stopPrank();
         vm.startPrank(bob);
         IERC20(usdc).approve(address(token), 3_000_000 * 1e6); // Approve $1,000,000 USDC
@@ -427,6 +449,12 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         // Fund the crowdfund to transition to the bonding curve phase
         token.fund(fundingAmount);
         uint256 bobInitialTokenBalance = token.balanceOf(bob);
+
+        vm.stopPrank();
+        vm.startPrank(owner);
+        factory.approveTokenCrowdfund(address(token));
+        vm.stopPrank();
+        vm.startPrank(bob);
 
         // Bob buys tokens during the bonding curve phase
         token.buy(bondingCurvePurchaseAmount);
@@ -454,61 +482,4 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.stopPrank();
     }
 
-    // function testFailFuzz_Donation(uint256 usdcAmount) public prank(bob) {
-    //     usdcAmount = bound(usdcAmount, 1, 999_999); // Less than $1 in USDC
-    //     IERC20(usdc).approve(address(token), usdcAmount);
-    //     token.fund(usdcAmount);
-    // }
-
-    // function testFuzz_BuyWithEth(uint256 ethAmount) public prank(alice) {
-    //     ethAmount = bound(ethAmount, 0.001 ether, 4 ether);
-    //     token.buyWithEth{value: ethAmount}(0);
-    //     assertGt(token.balanceOf(alice), 0);
-    // }
-
-    // function testFuzz_Buy(uint256 tokenAmount) public prank(bob) {
-    //     tokenAmount = bound(tokenAmount, 1e18, 1e21);
-    //     token.buy{value: 1000 ether}(tokenAmount);
-    //     assertTrue(token.balanceOf(bob) == tokenAmount);
-    // }
-
-    // function testfuzz_Sell_BondingCurve_One(uint256 buyAmount) public prank(bob) {
-    //     buyAmount = bound(buyAmount, 20_001e18, 79_000e18);
-    //     /// Purchase out the crowdfund
-    //     token.buy{value: 1000 ether}(buyAmount);
-    //     token.sell(token.balanceOf(bob) - 20_000e18, 0);
-    //     assertEq(token.balanceOf(bob), 20_000e18);
-    // }
-
-    // function testfuzz_Sell_BondingCurve_Two(uint256 buyAmount) public prank(bob) {
-    //     buyAmount = bound(buyAmount, 20_001e18, 69_000e18);
-    //     /// Purchase out the crowdfund
-    //     token.buy{value: 100 ether}(buyAmount);
-    //     uint256 buyAmountTwo = 10_000e18;
-    //     token.buy{value: 100 ether}(buyAmountTwo);
-    //     token.sell(token.balanceOf(bob) - 20_000e18, 0);
-    //     assertEq(token.balanceOf(bob), 20_000e18);
-    //     assertEq(token.crowdfund(bob), 20_000e18);
-    // }
-
-    // function testfuzz_Sell_BondingCurve_Three(uint256 buyAmount) public prank(bob) {
-    //     buyAmount = bound(buyAmount, 20_001e18, 79_000e18);
-    //     /// Purchase out the crowdfund
-    //     token.buy{value: 1000 ether}(buyAmount);
-    //     /// Unable to sell crowdfund tokens
-    //     vm.expectRevert(InsufficientTokens.selector);
-    //     token.sell(buyAmount, 0);
-    //     /// Unable to transfer tokens also
-    //     vm.expectRevert(WrongPhase.selector);
-    //     token.transfer(alice, buyAmount);
-    // }
-
-    // function testfuzz_Sell_Crowdfund(uint256 buyAmount) public prank(bob) {
-    //     buyAmount = bound(buyAmount, 1e18, 19_999e18);
-    //     token.buy{value: 1000 ether}(buyAmount);
-    //     uint256 amountToSell = token.balanceOf(bob);
-    //     vm.expectRevert(WrongPhase.selector);
-    //     token.sell(amountToSell, 0);
-    //     assertEq(token.crowdfund(bob), buyAmount);
-    // }
 }

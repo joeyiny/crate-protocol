@@ -188,18 +188,22 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.startPrank(bob);
         IERC20(usdc).approve(address(token), 100_000 * 1e6);
 
-        token.fund(5000 * 1e6);
+        token.fund(10000 * 1e6);
         vm.stopPrank();
 
         assertGt(token.artistCrowdfundFees(), 0, "Artist did not accumulate fees");
         uint256 initialArtistBalance = IERC20(usdc).balanceOf(owner);
-
         vm.startPrank(owner);
+        vm.expectRevert("Can't withdraw in this phase.");
+        token.withdrawArtistFees();
+
+        vm.expectRevert("Not authorized.");
+        token.enterPhaseBondingCurve();
+        factory.approveTokenCrowdfund(address(token));
         token.withdrawArtistFees();
 
         uint256 finalArtistBalance = IERC20(usdc).balanceOf(owner);
         assertEq(finalArtistBalance, initialArtistBalance + 4500 * 1e6, "Artist did not receive the correct USDC");
-
         assertEq(token.artistCrowdfundFees(), 0, "Artist fees should be reset to zero");
         vm.stopPrank();
     }
@@ -219,29 +223,28 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         assertEq(token.protocolCrowdfundFees(), 0, "Protocol fees should start at 0");
         uint256 protocolFeesToBePaid = token.protocolCrowdfundFees();
         uint256 initialOwnerBalance = IERC20(usdc).balanceOf(owner);
-
         vm.startPrank(bob);
         IERC20(usdc).approve(address(token), 100_000 * 1e6);
         token.fund(1000 * 1e6);
         assertEq(token.protocolCrowdfundFees(), 100 * 1e6, "Protocol fees should accumulate in variable");
         token.fund(4000 * 1e6);
+        vm.stopPrank();
+
+        assertTrue(token.phase() == Phase.PENDING, "Should be in pending phase.");
+
+        vm.startPrank(owner);
+        factory.approveTokenCrowdfund(address(token));
         assertEq(token.protocolCrowdfundFees(), 0, "Protocol fees should be at 0");
 
         vm.stopPrank();
 
         vm.startPrank(owner);
-        assertEq(IERC20(usdc).balanceOf(address(factory)), 500e6 + 19e6, "Protocol fees are not correct"); //includes $99 launchfee
+        assertEq(IERC20(usdc).balanceOf(address(factory)), 500e6 + 19e6, "Protocol fees are not correct"); //includes launchfee
 
         factory.withdraw();
         assertEq(IERC20(usdc).balanceOf(address(factory)), 0, "Protocol fees are were not withdrawn");
 
         vm.stopPrank();
-
-        // assertEq(
-        //     IERC20(usdc).balanceOf(owner),
-        //     initialOwnerBalance + protocolFeesToBePaid,
-        //     "Protocol fees were not withdrawn"
-        // );
     }
 
     // function testFail_WithdrawProtocolFees_WrongPhase() public {
