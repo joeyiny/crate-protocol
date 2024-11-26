@@ -426,7 +426,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         token.buy(100 * 1e6);
 
         vm.stopPrank();
-          vm.startPrank(owner);
+        vm.startPrank(owner);
         factory.approveTokenCrowdfund(address(token));
         vm.stopPrank();
         vm.startPrank(bob);
@@ -481,5 +481,4 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         // Stop the prank
         vm.stopPrank();
     }
-
 }
