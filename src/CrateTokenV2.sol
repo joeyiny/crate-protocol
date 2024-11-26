@@ -116,7 +116,7 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     function buy(uint256 _usdcAmount) public nonReentrant onlyPhase(Phase.BONDING_CURVE) {
         if (_usdcAmount == 0) revert Zero();
         address sender = LibMulticaller.sender();
-        require(IERC20(usdcToken).balanceOf(sender) >= _usdcAmount, "USDC allowance too low");
+        require(IERC20(usdcToken).balanceOf(sender) >= _usdcAmount, "USDC balance too low");
         require(IERC20(usdcToken).allowance(sender, address(this)) >= _usdcAmount, "USDC allowance too low");
         uint256 numTokens = _calculateAmmTokenOut(_usdcAmount);
         require(curve.tokenAmount >= numTokens, "Not enough tokens in curve.");
@@ -144,10 +144,9 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         require(success, "USDC transfer failed");
         emit TokenSale(sender, _tokenAmount, numUsdc);
     }
-    
+
     function enterPhaseBondingCurve() external nonReentrant onlyPhase(Phase.PENDING) {
-        require( msg.sender == protocolFeeDestination, "Not authorized.");
-        require(phase == Phase.PENDING, "This token is no longer in the Crowdfund phase, cannot cancel.");
+        require(msg.sender == protocolFeeDestination, "Not authorized.");
 
         uint256 virtualUsdc = 2000e6;
         curve.tokenAmount = 400e18;
@@ -166,7 +165,9 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
      */
     function cancelCrowdfund() external nonReentrant {
         require(msg.sender == artistFeeDestination || msg.sender == protocolFeeDestination, "Not authorized.");
-        require(phase == Phase.CROWDFUND||phase==Phase.PENDING, "This token is not in the correct phase, cannot cancel.");
+        require(
+            phase == Phase.CROWDFUND || phase == Phase.PENDING, "This token is not in the correct phase, cannot cancel."
+        );
 
         phase = Phase.CANCELED;
         protocolCrowdfundFees = 0;
@@ -210,15 +211,15 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
 
     function _enterPhasePending() private onlyPhase(Phase.CROWDFUND) {
         emit FinishCrowdfund();
-        phase=Phase.PENDING;
+        phase = Phase.PENDING;
     }
 
     function _transferProtocolFees() private onlyPhase(Phase.BONDING_CURVE) {
-        require(protocolCrowdfundFees >0,"There are no protocol fees accumulated.");
+        require(protocolCrowdfundFees > 0, "There are no protocol fees accumulated.");
         bool protocolFeePaid = IERC20(usdcToken).transfer(protocolFeeDestination, protocolCrowdfundFees);
         if (!protocolFeePaid) revert TransferFailed();
-        emit ProtocolFeesPaid(protocolCrowdfundFees);
         protocolCrowdfundFees = 0;
+        emit ProtocolFeesPaid(protocolCrowdfundFees);
     }
 
     /// VIEW ///
