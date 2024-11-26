@@ -68,12 +68,14 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     function fund(uint256 _usdcAmount) public nonReentrant onlyPhase(Phase.CROWDFUND) {
         if (_usdcAmount == 0) revert Zero();
 
+        bool willFinishCrowdfundFlag = false;
         uint256 amountNeeded = _usdcAmount;
+
         // Update phase
         // TODO: Handle the excess going into the bonding curve
         if (_usdcAmount + amountRaised >= crowdfundGoal) {
             amountNeeded = crowdfundGoal - amountRaised;
-            _enterPhasePending();
+            willFinishCrowdfundFlag=true;
         }
 
         address sender = LibMulticaller.sender();
@@ -102,6 +104,12 @@ contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
 
         artistCrowdfundFees += artistFee;
         protocolCrowdfundFees += protocolFee;
+
+     
+        if(willFinishCrowdfundFlag==true) {
+            _enterPhasePending();
+        }
+
         emit Fund(sender, amountNeeded, numTokens);
     }
 
