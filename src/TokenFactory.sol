@@ -4,7 +4,6 @@ pragma solidity ^0.8.24;
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {TokenFactory} from "./TokenFactory.sol";
 import {CrowdfundToken} from "./CrowdfundToken.sol";
 import {ICrateV2} from "./interfaces/ICrateV2.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
@@ -104,6 +103,4 @@ contract TokenFactory is Ownable2Step, ReentrancyGuard, ICrateV2 {
         tokenImplementation = newImplementation;
         emit TokenImplementationUpdated(newImplementation);
     }
-
-    receive() external payable {}
 }
