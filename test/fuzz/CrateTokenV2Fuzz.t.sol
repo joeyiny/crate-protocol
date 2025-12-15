@@ -77,7 +77,6 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         assertTrue(token.amountPaid(bob) == (usdcAmount));
 
         assertEq(IERC20(usdc).balanceOf(bob), initialUserBalance - usdcAmount, "Bob should have usdc balance deducted");
-        // assertEq(IERC20(usdc).balanceOf(address(token)), 0, "token contract should have not have any usdc");
         assertTrue(
             token.protocolCrowdfundFees() == (usdcAmount / 10), "protocol fee address should have earned 10% usdc"
         );
