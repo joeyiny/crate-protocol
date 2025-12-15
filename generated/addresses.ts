@@ -2,15 +2,18 @@
 // Generated from Foundry broadcast files by scripts/generate-deployments.ts
 
 export const addresses = {
+  "8453": {
+    TokenFactory: "0x80a7c57c96a3f561110d30528021e97a935b6b31",
+  },
   "31337": {
-    "TokenFactory": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0"
+    TokenFactory: "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
   },
   "84532": {
-    "TokenFactory": "0xe64021fb66e4282de0f86bb47005472786e6737a"
-  }
+    TokenFactory: "0xe64021fb66e4282de0f86bb47005472786e6737a",
+  },
 } as const;
 
-export const chains = [31337, 84532] as const;
+export const chains = [8453, 31337, 84532] as const;
 
 export type ChainId = typeof chains[number];
 

@@ -5,6 +5,7 @@
     "fork:base": "anvil --fork-url base --chain-id 31337 --fork-block-number 37550040",
     "deploy:anvil": "forge script script/Deploy.s.sol --broadcast --rpc-url http://localhost:8545",
     "deploy:testnet": "forge script script/Deploy.s.sol --broadcast --rpc-url https://sepolia.base.org",
+    "deploy:mainnet": "forge script script/Deploy.s.sol --broadcast --rpc-url https://mainnet.base.org",
     "generate:abis": "exec wagmi generate",
     "generate:deployments": "tsx scripts/generate-deployments.ts",
     "generate": "npm run generate:deployments && npm run generate:abis"
