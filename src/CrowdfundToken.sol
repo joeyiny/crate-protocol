@@ -4,7 +4,6 @@ pragma solidity ^0.8.24;
 import {ERC20Upgradeable} from "@openzeppelin-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {LibMulticaller} from "@multicaller/LibMulticaller.sol";
-import {IUniswapV2Router02} from "./interfaces/IUniswapV2RouterV2.sol";
 import {ICrateV2} from "./interfaces/ICrateV2.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
