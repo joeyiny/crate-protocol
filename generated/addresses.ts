@@ -3,11 +3,14 @@
 
 export const addresses = {
   "31337": {
-    "TokenFactory": "0x0d8a9ef652601a0e0fc6cfa669312aee21770fc7"
+    "TokenFactory": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0"
+  },
+  "84532": {
+    "TokenFactory": "0xe64021fb66e4282de0f86bb47005472786e6737a"
   }
 } as const;
 
-export const chains = [31337] as const;
+export const chains = [31337, 84532] as const;
 
 export type ChainId = typeof chains[number];
 
