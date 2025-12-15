@@ -5,12 +5,12 @@ import { foundry } from "@wagmi/cli/plugins";
 
 /** @type {import('@wagmi/cli').Config} */
 export default defineConfig({
-  out: "./generated-abi.ts",
+  out: "./generated/abi.ts",
   contracts: [],
   plugins: [
     foundry({
       project: "./",
-      include: ["Crate*"],
+      include: ["CrowdfundToken.sol/**", "TokenFactory.sol/**"],
     }),
   ],
 });

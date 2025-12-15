@@ -4,6 +4,7 @@ out
 cache
 broadcast
 .env
-Crate.code-workspace
 lcov.info
 coverage
+
+node_modules

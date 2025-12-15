@@ -12,3 +12,6 @@ remappings = [
     "@openzeppelin-upgradeable/=lib/openzeppelin-contracts-upgradeable/",
     "@multicaller/=lib/multicaller/src/"
 ]
+
+[rpc_endpoints]
+base="https://mainnet.base.org"
