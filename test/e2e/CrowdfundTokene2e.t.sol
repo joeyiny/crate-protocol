@@ -31,7 +31,7 @@ contract CrowdfundTokenTest is TestUtils, ICrateV2 {
         deal(usdc, owner, 100_000 * 1e6);
 
         vm.startPrank(owner);
-        factory = new TokenFactory(usdc);
+        factory = new TokenFactory(usdc,19e6);
         string memory name = "TestToken";
         string memory symbol = "TTK";
         string memory songURI = "example.com";
@@ -261,7 +261,7 @@ contract CrowdfundTokenTest is TestUtils, ICrateV2 {
         token.withdrawArtistFees();
 
         vm.expectRevert("Not authorized.");
-        token.enterPhaseBondingCurve();
+        token.completeCrowdfund();
         factory.approveTokenCrowdfund(address(token));
         token.withdrawArtistFees();
 
@@ -372,81 +372,7 @@ contract CrowdfundTokenTest is TestUtils, ICrateV2 {
         MockUSDC(usdc).setFailTransfers(false);
     }
 
-    function test_coverage_buy() public {
-        deal(usdc, alice, 5_000 * 1e6);
-
-        vm.startPrank(alice);
-
-        IERC20(usdc).approve(address(token), 5_000 * 1e6);
-        token.fund(5000e6);
-        vm.stopPrank();
-        vm.startPrank(owner);
-        factory.approveTokenCrowdfund(address(token));
-        vm.stopPrank();
-
-        vm.startPrank(alice);
-        vm.expectRevert(); // Can't buy Zero
-        token.buy(0);
-
-        vm.expectRevert("USDC balance too low");
-        token.buy(10e6);
-
-        deal(usdc, alice, 10e6);
-
-        vm.expectRevert("USDC allowance too low");
-        token.buy(10e6);
-
-        IERC20(usdc).approve(address(token), 10 * 1e6);
-
-        MockUSDC(usdc).setFailTransfers(true);
-
-        vm.expectRevert("USDC transfer failed");
-        token.buy(10e6);
-        MockUSDC(usdc).setFailTransfers(false);
-    }
-
-    function test_coverage_sell() public {
-        deal(usdc, alice, 1_000_000 * 1e6);
-
-        vm.startPrank(alice);
-
-        IERC20(usdc).approve(address(token), 1_000_000 * 1e6);
-        token.fund(5000e6);
-        vm.stopPrank();
-        vm.startPrank(owner);
-        factory.approveTokenCrowdfund(address(token));
-        vm.stopPrank();
-
-        vm.startPrank(alice);
-        vm.expectRevert(); // Can't buy Zero
-        token.sell(0);
-
-        vm.expectRevert("Insufficient token balance");
-        token.sell(1_000_000e18);
-
-        vm.expectRevert("Not enough liquidity.");
-        token.sell(10e18);
-        token.buy(1e6);
-        MockUSDC(usdc).setFailTransfers(true);
-
-        vm.expectRevert("USDC transfer failed");
-        token.sell(1e5);
-        MockUSDC(usdc).setFailTransfers(false);
-
-        // deal(usdc, alice, 10e6);
-
-        // vm.expectRevert("USDC allowance too low");
-        // token.buy(10e6);
-
-        // IERC20(usdc).approve(address(token), 10 * 1e6);
-
-        // MockUSDC(usdc).setFailTransfers(true);
-
-        // vm.expectRevert("USDC transfer failed");
-        // token.buy(10e6);
-    }
-
-    function test_coverage_enterPhaseBondingCurve() public {
+    function test_coverage_completeCrowdfund() public {
         vm.startPrank(owner);
         vm.expectRevert("Incorrect phase");
         factory.approveTokenCrowdfund(address(token));
@@ -458,7 +384,7 @@ contract CrowdfundTokenTest is TestUtils, ICrateV2 {
         token.fund(5000e6);
 
         vm.expectRevert("Not authorized.");
-        token.enterPhaseBondingCurve();
+        token.completeCrowdfund();
 
         vm.expectRevert();
         factory.approveTokenCrowdfund(address(token));
@@ -474,17 +400,17 @@ contract CrowdfundTokenTest is TestUtils, ICrateV2 {
         factory.approveTokenCrowdfund(address(newToken));
 
         vm.expectRevert("Not authorized.");
-        newToken.enterPhaseBondingCurve();
+        newToken.completeCrowdfund();
 
         vm.stopPrank();
 
         vm.startPrank(owner);
 
         vm.expectRevert("Not authorized.");
-        token.enterPhaseBondingCurve();
+        token.completeCrowdfund();
 
         vm.expectRevert("Not authorized.");
-        newToken.enterPhaseBondingCurve();
+        newToken.completeCrowdfund();
 
         factory.approveTokenCrowdfund(address(token));
         factory.approveTokenCrowdfund(address(newToken));
@@ -547,44 +473,4 @@ contract CrowdfundTokenTest is TestUtils, ICrateV2 {
         vm.expectRevert(); //Only artist
         token.withdrawArtistFees();
     }
-
-    function test_getCurrentPrice() public {
-        // First set up the crowdfund and move to bonding curve phase
-        vm.startPrank(bob);
-        IERC20(usdc).approve(address(token), 5000e6);
-        token.fund(5000e6);
-        vm.stopPrank();
-
-        vm.startPrank(owner);
-        factory.approveTokenCrowdfund(address(token));
-        vm.stopPrank();
-
-        // Now we're in bonding curve phase with initial setup:
-        // - tokenAmount = 400e18 (from enterPhaseBondingCurve)
-        // - virtualUsdcAmount = 2000e6 (from enterPhaseBondingCurve)
-        // - usdcAmount = 0 (initial state)
-
-        // Calculate expected price:
-        // price = (usdcReserve * 1e18) / tokenReserve
-        // price = (2000e6 * 1e18) / 400e18 = 5e6 ($5 USDC per token)
-        uint256 expectedPrice = 5e6;
-        uint256 actualPrice = token.getCurrentPrice();
-        assertEq(actualPrice, expectedPrice, "Initial price should be $5 USDC per token");
-
-        // Test price after buying tokens
-        vm.startPrank(bob);
-        IERC20(usdc).approve(address(token), 1000e6);
-        token.buy(1000e6); // Buy 1000 USDC worth of tokens
-
-        // Price should be higher after purchase
-        assertEq(token.getCurrentPrice(), 11250000, "Price should increase after purchase");
-        token.sell(50e18);
-        assertEq(token.getCurrentPrice(), 7977839, "Price should decrease after selling");
-    }
-
-    // function testEndBondingCurveAndAddLiquidity() public prank(bob) {
-    //     token.buy{value: 8 ether}(80_000 * 1e18); // Buy out the curve
-    //     assert(token.phase() == Phase.MARKET);
-    //     assertGt(address(token).balance, 0);
-    // }
 }

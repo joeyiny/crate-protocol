@@ -11,9 +11,9 @@ interface ICrateV2 {
 
     enum Phase {
         CROWDFUND,
-        BONDING_CURVE,
+        COMPLETED,
         CANCELED,
-        PENDING //This is for when the admin needs to approve a group buy's completion before it can enter BONDING_CURVE
+        PENDING //This is for when the admin needs to approve a group buy's completion before it can enter COMPLETED
     }
 
     struct BondingCurve {
@@ -26,16 +26,14 @@ interface ICrateV2 {
     event Fund(address funder, uint256 usdcAmount, uint256 tokenAmount);
     event TokenPurchase(address buyer, uint256 usdcAmount, uint256 tokenAmount);
     event TokenSale(address seller, uint256 tokenAmount, uint256 usdcAmount);
-    event FinishCrowdfund();
+    // event FinishCrowdfund();
     event StartBondingCurve(uint256 tokenReserve, uint256 realUsdcReserve, uint256 virtualUsdcReserve);
-    event CrowdfundCanceled();
+    // event CrowdfundCanceled();
     event ClaimRefund(address user, uint256 usdcAmount);
-    // event BondingCurveEnded();
     event ArtistFeesWithdrawn(address artist, uint256 amount);
     event ProtocolFeesPaid(uint256 amount);
-    // event LiquidityAdded(uint256 amountToken, uint256 amountETH, uint256 liquidity);
     event CrowdfundGoalUpdated(uint256 minimumGoal, uint256 maximumGoal);
-
+    event EnterPhase(Phase phase);
     error Zero();
     error WrongPhase();
     error OnlyArtist();

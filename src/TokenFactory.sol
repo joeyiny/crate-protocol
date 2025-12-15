@@ -14,7 +14,7 @@ contract TokenFactory is Ownable2Step, ReentrancyGuard, ICrateV2 {
     address private tokenImplementation;
 
     uint256 public maxCrowdfundGoal = 100_000e6; // $100,000 in USDC (maximum)
-    uint256 public minCrowdfundGoal = 10e6; // $10 in USDC (minimum)
+    uint256 public minCrowdfundGoal = 10e6; // $1 in USDC (minimum)
 
     address[] public allTokens;
     uint256 public launchCost;
@@ -22,8 +22,8 @@ contract TokenFactory is Ownable2Step, ReentrancyGuard, ICrateV2 {
     event ProtocolFeesWithdrawn(uint256 amount);
     event TokenImplementationUpdated(address newImplementation);
 
-    constructor(address _usdcToken) Ownable(msg.sender) {
-        launchCost = 19e6;
+    constructor(address _usdcToken, uint256 _launchCost) Ownable(msg.sender) {
+        launchCost = _launchCost;
         usdcToken = _usdcToken;
         tokenImplementation = address(new CrowdfundToken());
     }
@@ -62,7 +62,7 @@ contract TokenFactory is Ownable2Step, ReentrancyGuard, ICrateV2 {
     }
 
     function approveTokenCrowdfund(address tokenAddress) external onlyOwner {
-        CrowdfundToken(tokenAddress).enterPhaseBondingCurve();
+        CrowdfundToken(tokenAddress).completeCrowdfund();
     }
 
     function crateTokenAddress(address owner, bytes32 salt) public view returns (address addr, bool exists) {

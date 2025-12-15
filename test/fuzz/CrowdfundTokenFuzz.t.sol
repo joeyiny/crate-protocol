@@ -33,7 +33,7 @@ contract CrowdfundTokenTest is TestUtils, ICrateV2 {
         deal(usdc, artist, 100_000 * 1e6);
 
         vm.startPrank(owner);
-        factory = new TokenFactory(usdc);
+        factory = new TokenFactory(usdc,19e6);
         vm.stopPrank();
         vm.startPrank(artist);
 
@@ -112,7 +112,7 @@ contract CrowdfundTokenTest is TestUtils, ICrateV2 {
         vm.stopPrank();
         vm.startPrank(owner);
         factory.approveTokenCrowdfund(address(token));
-        assertTrue(token.phase() == Phase.BONDING_CURVE, "Should now be in bonding curve phase");
+        assertTrue(token.phase() == Phase.COMPLETED, "Should now be in bonding curve phase");
         vm.stopPrank();
     }
 
@@ -175,7 +175,7 @@ contract CrowdfundTokenTest is TestUtils, ICrateV2 {
         vm.stopPrank();
 
         // Verify we're still in bonding curve phase
-        assertEq(uint256(token.phase()), uint256(Phase.BONDING_CURVE), "Should still be in bonding curve phase");
+        assertEq(uint256(token.phase()), uint256(Phase.COMPLETED), "Should still be in bonding curve phase");
     }
 
     function test_CancelCrowdfund_MultipleUsers() public {
@@ -381,7 +381,7 @@ contract CrowdfundTokenTest is TestUtils, ICrateV2 {
     function test_RevertWhen_CancelCrowdfund_WrongPhase() public {
         vm.startPrank(artist);
 
-        // Transition the phase to BONDING_CURVE to simulate an active phase
+        // Transition the phase to COMPLETED to simulate an active phase
         IERC20(usdc).approve(address(token), 100_000 * 1e6);
         token.fund(5000 * 1e6);
         vm.stopPrank();
@@ -391,101 +391,6 @@ contract CrowdfundTokenTest is TestUtils, ICrateV2 {
         vm.startPrank(artist);
         vm.expectRevert("This token is not in the correct phase, cannot cancel.");
         token.cancelCrowdfund();
-        vm.stopPrank();
-    }
-
-    function test_PurchaseInBondingCurve() public {
-        vm.startPrank(bob);
-
-        IERC20(usdc).approve(address(token), 100_000 * 1e6);
-
-        token.fund(5000 * 1e6);
-        vm.expectRevert("Incorrect phase");
-        token.buy(5000 * 1e6);
-        vm.stopPrank();
-        vm.startPrank(owner);
-        factory.approveTokenCrowdfund(address(token));
-        vm.stopPrank();
-        vm.startPrank(bob);
-        token.buy(10000 * 1e6);
-        token.buy(12000 * 1e6);
-
-        vm.stopPrank();
-    }
-
-    function test_RevertWhen_PurchaseInBondingCurve_WrongPhase() public {
-        vm.startPrank(bob);
-
-        IERC20(usdc).approve(address(token), 100_000 * 1e6);
-
-        token.fund(4999 * 1e6);
-        vm.expectRevert("Incorrect phase");
-        token.buy(1 * 1e6);
-        vm.stopPrank();
-    }
-
-    function test_BondingCurve_LargePurchase() public {
-        vm.startPrank(alice);
-
-        IERC20(usdc).approve(address(token), 3_000_000 * 1e6); // Approve $1,000,000 USDC
-        token.fund(5000 * 1e6); // Complete crowdfund
-        vm.expectRevert("Incorrect phase");
-        token.buy(100 * 1e6);
-
-        vm.stopPrank();
-        vm.startPrank(owner);
-        factory.approveTokenCrowdfund(address(token));
-        vm.stopPrank();
-        vm.startPrank(bob);
-        IERC20(usdc).approve(address(token), 3_000_000 * 1e6); // Approve $1,000,000 USDC
-
-        token.buy(1 * 1e6);
-
-        uint256 bobTokenBalance = token.balanceOf(bob);
-        assert(bobTokenBalance > 0);
-        vm.stopPrank();
-    }
-
-    function test_SellInBondingCurve() public {
-        // Set up the initial test conditions
-        vm.startPrank(bob);
-        uint256 fundingAmount = 5000 * 1e6;
-        uint256 bondingCurvePurchaseAmount = 5000 * 1e6;
-        IERC20(usdc).approve(address(token), 50_000 * 1e6);
-
-        // Fund the crowdfund to transition to the bonding curve phase
-        token.fund(fundingAmount);
-        uint256 bobInitialTokenBalance = token.balanceOf(bob);
-
-        vm.stopPrank();
-        vm.startPrank(owner);
-        factory.approveTokenCrowdfund(address(token));
-        vm.stopPrank();
-        vm.startPrank(bob);
-
-        // Bob buys tokens during the bonding curve phase
-        token.buy(bondingCurvePurchaseAmount);
-
-        // Record Bob's token balance and USDC balance after buying tokens
-        uint256 bobBondingCurveTokens = token.balanceOf(bob) - bobInitialTokenBalance;
-        uint256 bobUSDCBalanceBeforeSell = IERC20(usdc).balanceOf(bob);
-
-        // Bob sells half of the tokens acquired during the bonding curve phase
-        uint256 sellAmount = bobBondingCurveTokens / 2;
-        token.sell(sellAmount);
-
-        // Calculate expected balances after selling
-        uint256 bobTokenBalanceAfterSell = token.balanceOf(bob);
-        uint256 bobUSDCBalanceAfterSell = IERC20(usdc).balanceOf(bob);
-
-        // Assert that Bob's token balance is correct after the sale
-        uint256 expectedTokenBalance = bobInitialTokenBalance + (bobBondingCurveTokens - sellAmount);
-        assertEq(bobTokenBalanceAfterSell, expectedTokenBalance);
-
-        // Assert that Bob's USDC balance has increased after the sale
-        assertGt(bobUSDCBalanceAfterSell, bobUSDCBalanceBeforeSell);
-
-        // Stop the prank
         vm.stopPrank();
     }
 }

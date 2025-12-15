@@ -9,7 +9,8 @@ import {TokenFactory} from "../src/TokenFactory.sol";
 contract DeployStoa is Script {
     function run() public {
         vm.startBroadcast();
-        TokenFactory tokenLauncher = new TokenFactory(0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913); //usdc on base address
+        TokenFactory tokenLauncher = new TokenFactory(0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913,1e6); //usdc on base address
+        //1e6 is the launch cost ($1 usdc)
         vm.stopBroadcast();
     }
 }

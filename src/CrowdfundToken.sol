@@ -9,7 +9,7 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 /**
  * This is a crowdfunded token launch.
- * Users crowdfund and receive nontransferable tokens. Once the goal is hit, then the tokens become transferable and a market is launched for the tokens.
+ * Users crowdfund and receive nontransferable tokens.
  */
 contract CrowdfundToken is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     //IMMUTABLE
@@ -31,9 +31,6 @@ contract CrowdfundToken is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     mapping(address => uint256) public amountPaid; //This is the amount of money users have sent in the crowdfund phase. This is to handle crowdfund cancels/refunds.
     mapping(address => bool) public refundClaimed;
 
-    //AMM
-    BondingCurve public curve;
-
     constructor() {
         _disableInitializers();
     }
@@ -54,7 +51,8 @@ contract CrowdfundToken is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         phase = Phase.CROWDFUND;
         songURI = _songURI;
         crowdfundGoal = _crowdfundGoal;
-        _mint(address(this), 1500e18);
+        uint256 tokenSupply = calculateTokenPurchaseAmount(_crowdfundGoal);
+        _mint(address(this), tokenSupply);
     }
 
     modifier onlyPhase(Phase _requiredPhase) {
@@ -70,8 +68,6 @@ contract CrowdfundToken is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         bool willFinishCrowdfundFlag = false;
         uint256 amountNeeded = _usdcAmount;
 
-        // Update phase
-        // TODO: Handle the excess going into the bonding curve
         if (_usdcAmount + amountRaised >= crowdfundGoal) {
             amountNeeded = crowdfundGoal - amountRaised;
             willFinishCrowdfundFlag=true;
@@ -112,48 +108,12 @@ contract CrowdfundToken is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         emit Fund(sender, amountNeeded, numTokens);
     }
 
-    function buy(uint256 _usdcAmount) public nonReentrant onlyPhase(Phase.BONDING_CURVE) {
-        if (_usdcAmount == 0) revert Zero();
-        address sender = LibMulticaller.sender();
-        require(IERC20(usdcToken).balanceOf(sender) >= _usdcAmount, "USDC balance too low");
-        require(IERC20(usdcToken).allowance(sender, address(this)) >= _usdcAmount, "USDC allowance too low");
-        uint256 numTokens = _calculateAmmTokenOut(_usdcAmount);
-        require(curve.tokenAmount >= numTokens, "Not enough tokens in curve.");
-        // Transfer USDC from sender to this contract
-        bool success = IERC20(usdcToken).transferFrom(sender, address(this), _usdcAmount);
-        require(success, "USDC transfer failed");
-
-        curve.tokenAmount -= numTokens;
-        curve.usdcAmount += _usdcAmount;
-        //Transfer Tokens
-        _transfer(address(this), sender, numTokens);
-        emit TokenPurchase(sender, _usdcAmount, numTokens);
-    }
-
-    function sell(uint256 _tokenAmount) public nonReentrant onlyPhase(Phase.BONDING_CURVE) {
-        if (_tokenAmount == 0) revert Zero();
-        address sender = LibMulticaller.sender();
-        require(balanceOf(sender) >= _tokenAmount, "Insufficient token balance");
-        uint256 numUsdc = _calculateAmmUsdcOut(_tokenAmount);
-        require(curve.usdcAmount >= numUsdc, "Not enough liquidity.");
-        curve.tokenAmount += _tokenAmount;
-        curve.usdcAmount -= numUsdc;
-        _transfer(sender, address(this), _tokenAmount);
-        bool success = IERC20(usdcToken).transfer(sender, numUsdc);
-        require(success, "USDC transfer failed");
-        emit TokenSale(sender, _tokenAmount, numUsdc);
-    }
-
-    function enterPhaseBondingCurve() external nonReentrant onlyPhase(Phase.PENDING) {
+    function completeCrowdfund() external nonReentrant onlyPhase(Phase.PENDING) {
         require(msg.sender == protocolFeeDestination, "Not authorized.");
 
-        uint256 virtualUsdc = 2000e6;
-        curve.tokenAmount = 400e18;
-        curve.usdcAmount = 0;
-        curve.virtualUsdcAmount = virtualUsdc;
-        phase = Phase.BONDING_CURVE;
+        phase = Phase.COMPLETED;
         _transferProtocolFees();
-        emit StartBondingCurve(curve.tokenAmount, curve.usdcAmount, curve.virtualUsdcAmount);
+        emit EnterPhase(phase);
     }
 
     /**
@@ -171,7 +131,7 @@ contract CrowdfundToken is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
         phase = Phase.CANCELED;
         protocolCrowdfundFees = 0;
         artistCrowdfundFees = 0;
-        emit CrowdfundCanceled();
+        emit EnterPhase(phase);
     }
 
     function claimRefund() external nonReentrant {
@@ -195,7 +155,7 @@ contract CrowdfundToken is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     }
 
     function withdrawArtistFees() public nonReentrant {
-        require(phase == Phase.BONDING_CURVE, "Can't withdraw in this phase.");
+        require(phase == Phase.COMPLETED, "Can't withdraw in this phase.");
         address sender = LibMulticaller.sender();
         if (sender != artistFeeDestination) revert OnlyArtist();
         if (artistCrowdfundFees == 0) revert Zero();
@@ -209,16 +169,16 @@ contract CrowdfundToken is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     /// PRIVATE ///
 
     function _enterPhasePending() private onlyPhase(Phase.CROWDFUND) {
-        emit FinishCrowdfund();
         phase = Phase.PENDING;
+        emit EnterPhase(phase);
     }
 
-    function _transferProtocolFees() private onlyPhase(Phase.BONDING_CURVE) {
+    function _transferProtocolFees() private onlyPhase(Phase.COMPLETED) {
         require(protocolCrowdfundFees > 0, "There are no protocol fees accumulated.");
         bool protocolFeePaid = IERC20(usdcToken).transfer(protocolFeeDestination, protocolCrowdfundFees);
         if (!protocolFeePaid) revert TransferFailed();
-        protocolCrowdfundFees = 0;
         emit ProtocolFeesPaid(protocolCrowdfundFees);
+        protocolCrowdfundFees = 0;
     }
 
     /// VIEW ///
@@ -231,38 +191,6 @@ contract CrowdfundToken is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
 
     function getInitialPrice() public pure returns (uint256) {
         return 5e6; // $5 per token
-    }
-
-    function getCurrentPrice() public view returns (uint256) {
-        // Get USDC reserve in its native 6 decimals
-        uint256 usdcReserve = curve.usdcAmount + curve.virtualUsdcAmount;
-        // Token reserve in 18 decimals
-        uint256 tokenReserve = curve.tokenAmount;
-
-        // Ensure token reserve is not zero to prevent division by zero
-        require(tokenReserve > 0, "Token reserve is zero");
-
-        // Price calculation:
-        // We want price in USDC (6 decimals) per whole token (18 decimals)
-        // To maintain precision while accounting for token's 18 decimals:
-        // 1. Multiply USDC by 1e18 for precision
-        // 2. Divide by tokenReserve (18 decimals)
-        // Final result will be in 6 decimals (USDC's native decimals)
-        uint256 pricePerToken = (usdcReserve * 1e18) / tokenReserve;
-
-        return pricePerToken; // Returns price in USDC's 6 decimal precision
-    }
-
-    function _calculateAmmTokenOut(uint256 usdcIn) internal view returns (uint256) {
-        uint256 k = (curve.virtualUsdcAmount + curve.usdcAmount) * curve.tokenAmount;
-        uint256 newUsdcAmount = curve.virtualUsdcAmount + curve.usdcAmount + usdcIn;
-        return curve.tokenAmount - (k / newUsdcAmount);
-    }
-
-    function _calculateAmmUsdcOut(uint256 tokenIn) internal view returns (uint256) {
-        uint256 k = (curve.virtualUsdcAmount + curve.usdcAmount) * curve.tokenAmount;
-        uint256 newTokenAmount = curve.tokenAmount + tokenIn;
-        return (curve.virtualUsdcAmount + curve.usdcAmount) - (k / newTokenAmount);
     }
 
     /// INTERNAL ///
@@ -284,15 +212,14 @@ contract CrowdfundToken is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
             } else {
                 revert("Transfers not allowed during canceled phase");
             }
-        } else if (phase == Phase.BONDING_CURVE) {
+        } else if (phase == Phase.PENDING) {
             if (from == address(this) || from == address(0) || to == address(0) || to == address(this)) {
                 super._update(from, to, value);
                 return;
             } else {
-                revert("Transfers not allowed during bonding curve phase");
+                revert("Transfers not allowed during pending phase");
             }
-        } else {
-            revert("Transfers not allowed during pending phase");
         }
+        super._update(from, to, value);
     }
 }

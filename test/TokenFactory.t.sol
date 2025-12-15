@@ -20,7 +20,7 @@ contract TokenFactoryTest is TestUtils, ICrateV2 {
         // Set up the environment before each test
         usdc = address(new MockUSDC());
         deal(usdc, address(this), 1_000_000e6); // Give tester 1,000,000 USDC
-        factory = new TokenFactory(usdc);
+        factory = new TokenFactory(usdc, 19e6);
     }
 
     function testCreateToken() public {
