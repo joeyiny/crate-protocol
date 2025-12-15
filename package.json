@@ -3,7 +3,8 @@
     "test": "forge test -vvv --fork-url http://localhost:8545 -w --run-all --summary",
     "anvil": "anvil --load-state anvil-state.json",
     "fork:base": "anvil --fork-url base --chain-id 31337 --fork-block-number 37550040",
-    "deploy:anvil": "forge script script/Deploy.s.sol --broadcast --rpc-url http://localhost:8545 --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+    "deploy:anvil": "forge script script/Deploy.s.sol --broadcast --rpc-url http://localhost:8545",
+    "deploy:testnet": "forge script script/Deploy.s.sol --broadcast --rpc-url https://sepolia.base.org",
     "generate:abis": "exec wagmi generate",
     "generate:deployments": "tsx scripts/generate-deployments.ts",
     "generate": "npm run generate:deployments && npm run generate:abis"

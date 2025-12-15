@@ -62,13 +62,6 @@ export const crowdfundTokenAbi = [
   {
     type: 'function',
     inputs: [{ name: '_usdcAmount', internalType: 'uint256', type: 'uint256' }],
-    name: 'buy',
-    outputs: [],
-    stateMutability: 'nonpayable',
-  },
-  {
-    type: 'function',
-    inputs: [{ name: '_usdcAmount', internalType: 'uint256', type: 'uint256' }],
     name: 'calculateTokenPurchaseAmount',
     outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
     stateMutability: 'pure',
@@ -90,6 +83,13 @@ export const crowdfundTokenAbi = [
   {
     type: 'function',
     inputs: [],
+    name: 'completeCrowdfund',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [],
     name: 'crowdfundGoal',
     outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
     stateMutability: 'view',
@@ -104,27 +104,9 @@ export const crowdfundTokenAbi = [
   {
     type: 'function',
     inputs: [],
-    name: 'curve',
-    outputs: [
-      { name: 'tokenAmount', internalType: 'uint256', type: 'uint256' },
-      { name: 'usdcAmount', internalType: 'uint256', type: 'uint256' },
-      { name: 'virtualUsdcAmount', internalType: 'uint256', type: 'uint256' },
-    ],
-    stateMutability: 'view',
-  },
-  {
-    type: 'function',
-    inputs: [],
     name: 'decimals',
     outputs: [{ name: '', internalType: 'uint8', type: 'uint8' }],
     stateMutability: 'view',
-  },
-  {
-    type: 'function',
-    inputs: [],
-    name: 'enterPhaseBondingCurve',
-    outputs: [],
-    stateMutability: 'nonpayable',
   },
   {
     type: 'function',
@@ -132,13 +114,6 @@ export const crowdfundTokenAbi = [
     name: 'fund',
     outputs: [],
     stateMutability: 'nonpayable',
-  },
-  {
-    type: 'function',
-    inputs: [],
-    name: 'getCurrentPrice',
-    outputs: [{ name: '', internalType: 'uint256', type: 'uint256' }],
-    stateMutability: 'view',
   },
   {
     type: 'function',
@@ -196,15 +171,6 @@ export const crowdfundTokenAbi = [
     name: 'refundClaimed',
     outputs: [{ name: '', internalType: 'bool', type: 'bool' }],
     stateMutability: 'view',
-  },
-  {
-    type: 'function',
-    inputs: [
-      { name: '_tokenAmount', internalType: 'uint256', type: 'uint256' },
-    ],
-    name: 'sell',
-    outputs: [],
-    stateMutability: 'nonpayable',
   },
   {
     type: 'function',
@@ -332,7 +298,6 @@ export const crowdfundTokenAbi = [
     ],
     name: 'ClaimRefund',
   },
-  { type: 'event', anonymous: false, inputs: [], name: 'CrowdfundCanceled' },
   {
     type: 'event',
     anonymous: false,
@@ -352,7 +317,19 @@ export const crowdfundTokenAbi = [
     ],
     name: 'CrowdfundGoalUpdated',
   },
-  { type: 'event', anonymous: false, inputs: [], name: 'FinishCrowdfund' },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      {
+        name: 'phase',
+        internalType: 'enum ICrateV2.Phase',
+        type: 'uint8',
+        indexed: false,
+      },
+    ],
+    name: 'EnterPhase',
+  },
   {
     type: 'event',
     anonymous: false,
@@ -593,10 +570,12 @@ export const crowdfundTokenAbi = [
 export const tokenFactoryAbi = [
   {
     type: 'constructor',
-    inputs: [{ name: '_usdcToken', internalType: 'address', type: 'address' }],
+    inputs: [
+      { name: '_usdcToken', internalType: 'address', type: 'address' },
+      { name: '_launchCost', internalType: 'uint256', type: 'uint256' },
+    ],
     stateMutability: 'nonpayable',
   },
-  { type: 'receive', stateMutability: 'payable' },
   {
     type: 'function',
     inputs: [],
@@ -782,7 +761,6 @@ export const tokenFactoryAbi = [
     ],
     name: 'ClaimRefund',
   },
-  { type: 'event', anonymous: false, inputs: [], name: 'CrowdfundCanceled' },
   {
     type: 'event',
     anonymous: false,
@@ -802,7 +780,19 @@ export const tokenFactoryAbi = [
     ],
     name: 'CrowdfundGoalUpdated',
   },
-  { type: 'event', anonymous: false, inputs: [], name: 'FinishCrowdfund' },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      {
+        name: 'phase',
+        internalType: 'enum ICrateV2.Phase',
+        type: 'uint8',
+        indexed: false,
+      },
+    ],
+    name: 'EnterPhase',
+  },
   {
     type: 'event',
     anonymous: false,

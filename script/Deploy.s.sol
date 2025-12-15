@@ -6,11 +6,20 @@ import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 import {TokenFactory} from "../src/TokenFactory.sol";
 
-contract DeployStoa is Script {
+contract Deploy is Script {
     function run() public {
+        address usdc;
+        if (block.chainid == 84532) {
+            usdc = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
+        } else if (block.chainid == 8453) {
+            usdc = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
+        } else if (block.chainid == 31337) {
+            usdc = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; //same as base mainnet, change if you want mock usdc
+        } else {
+            revert("unsupported chain");
+        }
         vm.startBroadcast();
-        TokenFactory tokenLauncher = new TokenFactory(0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913,1e6); //usdc on base address
-        //1e6 is the launch cost ($1 usdc)
+        TokenFactory tokenLauncher = new TokenFactory(usdc, 1e6);
         vm.stopBroadcast();
     }
 }
