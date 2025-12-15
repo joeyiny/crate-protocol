@@ -88,10 +88,10 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         assertTrue(token.balanceOf(bob) == (usdcAmount * 1e18) / (5 * 1e6), "user should have earned tokens");
     }
 
-    function testFail_DonationDuringWrongPhase(uint256 usdcAmount) public prank(bob) {
-        uint256 initialUserBalance = IERC20(usdc).balanceOf(bob);
+    function test_RevertWhen_DonationDuringWrongPhase() public prank(bob) {
         IERC20(usdc).approve(address(token), 10_000e6);
         token.fund(5000e6); //sell out the curve
+        vm.expectRevert("Incorrect phase");
         token.fund(1);
     }
 
@@ -316,14 +316,15 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         assertEq(token.crowdfundTokens(charlie), 0, "Charlie's crowdfundTokens should be reset to zero");
     }
 
-    function testFail_ClaimRefund_NotCanceled() public {
+    function test_RevertWhen_ClaimRefund_NotCanceled() public {
         // Bob tries to claim refund before crowdfund is canceled
         vm.startPrank(bob);
+        vm.expectRevert("Crowdfund not canceled");
         token.claimRefund();
         vm.stopPrank();
     }
 
-    function testFail_ClaimRefund_Twice() public {
+    function test_RevertWhen_ClaimRefund_Twice() public {
         // Bob participates in the crowdfund
         vm.startPrank(bob);
         IERC20(usdc).approve(address(token), 100_000 * 1e6);
@@ -338,27 +339,32 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.startPrank(bob);
         token.claimRefund();
         // Bob tries to claim refund again (should fail)
+        vm.expectRevert("Refund already claimed");
         token.claimRefund();
         vm.stopPrank();
     }
 
-    function testFail_ClaimRefund_NoFunds() public {
+    function test_RevertWhen_ClaimRefund_NoFunds() public {
         // Alice did not participate in the crowdfund
-        vm.prank(artist);
+        vm.startPrank(artist);
+        IERC20(usdc).approve(address(token), 1000e6);
         token.fund(1000e6);
         token.cancelCrowdfund();
+        vm.stopPrank();
 
         // Alice tries to claim refund (should fail)
         vm.startPrank(alice);
+        vm.expectRevert("No funds to refund");
         token.claimRefund();
         vm.stopPrank();
     }
 
-    function testFail_CancelCrowdfund_NoAuth() public {
+    function test_RevertWhen_CancelCrowdfund_NoAuth() public {
         vm.startPrank(alice);
         IERC20(usdc).approve(address(token), 100_000 * 1e6);
 
         token.fund(200 * 1e6);
+        vm.expectRevert("Not authorized.");
         token.cancelCrowdfund();
         vm.stopPrank();
     }
@@ -373,7 +379,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.stopPrank();
     }
 
-    function testFail_CancelCrowdfund_WrongPhase() public {
+    function test_RevertWhen_CancelCrowdfund_WrongPhase() public {
         vm.startPrank(artist);
 
         // Transition the phase to BONDING_CURVE to simulate an active phase
@@ -384,6 +390,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         factory.approveTokenCrowdfund(address(token));
         vm.stopPrank();
         vm.startPrank(artist);
+        vm.expectRevert("This token is not in the correct phase, cannot cancel.");
         token.cancelCrowdfund();
         vm.stopPrank();
     }
@@ -407,12 +414,13 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.stopPrank();
     }
 
-    function testFail_PurchaseInBondingCurve_WrongPhase() public {
+    function test_RevertWhen_PurchaseInBondingCurve_WrongPhase() public {
         vm.startPrank(bob);
 
         IERC20(usdc).approve(address(token), 100_000 * 1e6);
 
         token.fund(4999 * 1e6);
+        vm.expectRevert("Incorrect phase");
         token.buy(1 * 1e6);
         vm.stopPrank();
     }

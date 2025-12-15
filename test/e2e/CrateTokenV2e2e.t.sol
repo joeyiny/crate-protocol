@@ -187,24 +187,26 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         assertEq(validToken.crowdfundGoal(), validGoal);
     }
 
-    function testFail_CreateTokenWithBelowMinCrowdfundGoal() public {
-        uint256 invalidGoal = 50e6; // Below $100 minimum
+    function test_RevertWhen_CreateTokenWithBelowMinCrowdfundGoal() public {
+        uint256 invalidGoal = 5e6;
         vm.startPrank(owner);
         string memory name = "BelowMinToken";
         string memory symbol = "BMT";
         string memory songURI = "example.com/belowmin";
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
+        vm.expectRevert(ICrateV2.InvalidCrowdfundGoal.selector);
         factory.createToken(name, symbol, songURI, salt, invalidGoal);
         vm.stopPrank();
     }
 
-    function testFail_CreateTokenWithAboveMaxCrowdfundGoal() public {
+    function test_RevertWhen_CreateTokenWithAboveMaxCrowdfundGoal() public {
         uint256 invalidGoal = 200_000e6; // Above $100,000 maximum
         vm.startPrank(owner);
         string memory name = "AboveMaxToken";
         string memory symbol = "AMT";
         string memory songURI = "example.com/abovemax";
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
+        vm.expectRevert(ICrateV2.InvalidCrowdfundGoal.selector);
         factory.createToken(name, symbol, songURI, salt, invalidGoal);
         vm.stopPrank();
     }
@@ -269,13 +271,14 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         vm.stopPrank();
     }
 
-    function testFail_WithdrawArtistFees_WrongPhase() public {
+    function test_RevertWhen_WithdrawArtistFees_WrongPhase() public {
         vm.startPrank(bob);
 
         IERC20(usdc).approve(address(token), 100_000 * 1e6);
         token.fund(4000 * 1e6);
         vm.stopPrank();
         vm.startPrank(owner);
+        vm.expectRevert("Can't withdraw in this phase.");
         token.withdrawArtistFees();
         vm.stopPrank();
     }
@@ -319,10 +322,11 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
     //     vm.stopPrank();
     // }
 
-    function testFail_WithdrawArtistFees_WrongUser() public {
+    function test_RevertWhen_WithdrawArtistFees_WrongUser() public {
         vm.startPrank(bob);
         IERC20(usdc).approve(address(token), 100_000 * 1e6);
         token.fund(5000 * 1e6);
+        vm.expectRevert();
         token.withdrawArtistFees();
         vm.stopPrank();
     }

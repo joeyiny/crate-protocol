@@ -61,7 +61,7 @@ contract CrateFactoryV2Test is TestUtils, ICrateV2 {
         }
     }
 
-    function testFailCreateTokenWithInsufficientUSDC() public {
+    function test_RevertWhen_CreateTokenWithInsufficientUSDC() public {
         // Attempt to create a token without sending enough USDC should fail
         address alice = address(0x123);
         vm.deal(alice, 1 ether);
@@ -75,6 +75,7 @@ contract CrateFactoryV2Test is TestUtils, ICrateV2 {
         string memory songURI = "example.com";
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
 
+        vm.expectRevert();
         factory.createToken(name, symbol, songURI, salt, 5000e6); // Not enough USDC
         vm.stopPrank();
     }
@@ -87,20 +88,22 @@ contract CrateFactoryV2Test is TestUtils, ICrateV2 {
         assertEq(factory.launchCost(), newLaunchCost, "Launch cost should be updated to new value.");
     }
 
-    function testFailSameSalt() public {
+    function test_RevertWhen_SameSalt() public {
         string memory name = "UniqueToken";
         string memory symbol = "UNQ";
         string memory songURI = "unique.com";
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
+
+        IERC20(usdc).approve(address(factory), factory.launchCost() * 2);
 
         // First token creation should succeed
         address firstClone = address(factory.createToken(name, symbol, songURI, salt, 5000e6));
         assertTrue(firstClone != address(0), "First token creation failed");
 
         // Second token creation with the same salt should fail
+        vm.expectRevert();
         factory.createToken(name, symbol, songURI, salt, 5000e6);
     }
-
 
     receive() external payable {}
 }
