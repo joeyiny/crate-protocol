@@ -10,6 +10,7 @@ import {ICrateV2} from "./interfaces/ICrateV2.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 contract TokenFactory is Ownable2Step, ReentrancyGuard, ICrateV2 {
+    uint32 public constant CONTRACT_VERSION = 3;
     address public immutable usdcToken;
     address private tokenImplementation;
 
