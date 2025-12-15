@@ -4,12 +4,12 @@ pragma solidity ^0.8.24;
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {CrateFactoryV2} from "./CrateFactoryV2.sol";
-import {CrateTokenV2} from "./CrateTokenV2.sol";
+import {TokenFactory} from "./TokenFactory.sol";
+import {CrowdfundToken} from "./CrowdfundToken.sol";
 import {ICrateV2} from "./interfaces/ICrateV2.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
-contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
+contract TokenFactory is Ownable2Step, ReentrancyGuard, ICrateV2 {
     address public immutable usdcToken;
     address private tokenImplementation;
 
@@ -25,7 +25,7 @@ contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
     constructor(address _usdcToken) Ownable(msg.sender) {
         launchCost = 19e6;
         usdcToken = _usdcToken;
-        tokenImplementation = address(new CrateTokenV2());
+        tokenImplementation = address(new CrowdfundToken());
     }
 
     function createToken(
@@ -50,7 +50,7 @@ contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
         if (!success) revert TransferFailed();
 
         address clone = Clones.cloneDeterministic(tokenImplementation, _saltedSalt(sender, salt));
-        CrateTokenV2 newToken = CrateTokenV2(clone);
+        CrowdfundToken newToken = CrowdfundToken(clone);
         allTokens.push(address(newToken));
         emit TokenLaunched(address(newToken), name, symbol, crowdfundGoal);
         newToken.initialize(usdcToken, name, symbol, address(this), sender, songURI, crowdfundGoal);
@@ -58,11 +58,11 @@ contract CrateFactoryV2 is Ownable2Step, ReentrancyGuard, ICrateV2 {
     }
 
     function cancelTokenCrowdfund(address tokenAddress) external onlyOwner {
-        CrateTokenV2(tokenAddress).cancelCrowdfund();
+        CrowdfundToken(tokenAddress).cancelCrowdfund();
     }
 
     function approveTokenCrowdfund(address tokenAddress) external onlyOwner {
-        CrateTokenV2(tokenAddress).enterPhaseBondingCurve();
+        CrowdfundToken(tokenAddress).enterPhaseBondingCurve();
     }
 
     function crateTokenAddress(address owner, bytes32 salt) public view returns (address addr, bool exists) {

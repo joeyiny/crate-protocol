@@ -2,15 +2,15 @@
 pragma solidity ^0.8.24;
 
 import {TestUtils} from "test/utils/TestUtils.sol";
-import {CrateFactoryV2} from "src/CrateFactoryV2.sol";
-import {CrateTokenV2} from "src/CrateTokenV2.sol";
+import {TokenFactory} from "src/TokenFactory.sol";
+import {CrowdfundToken} from "src/CrowdfundToken.sol";
 import {ICrateV2} from "src/interfaces/ICrateV2.sol";
 import {MockUSDC} from "test/mock/MockUSDC.sol";
 
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
-contract CrateFactoryV2Test is TestUtils, ICrateV2 {
-    CrateFactoryV2 factory;
+contract TokenFactoryTest is TestUtils, ICrateV2 {
+    TokenFactory factory;
     address uniswapRouter = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
     address usdc;
 
@@ -20,7 +20,7 @@ contract CrateFactoryV2Test is TestUtils, ICrateV2 {
         // Set up the environment before each test
         usdc = address(new MockUSDC());
         deal(usdc, address(this), 1_000_000e6); // Give tester 1,000,000 USDC
-        factory = new CrateFactoryV2(usdc);
+        factory = new TokenFactory(usdc);
     }
 
     function testCreateToken() public {
@@ -38,8 +38,8 @@ contract CrateFactoryV2Test is TestUtils, ICrateV2 {
         assertTrue(tokenAddress != address(0), "Token creation failed.");
         assertEq(factory.allTokens(0), tokenAddress, "Token address should be recorded in allTokens.");
 
-        // Check token details (assuming public view functions in CrateTokenV2 for this)
-        CrateTokenV2 token = CrateTokenV2(tokenAddress);
+        // Check token details (assuming public view functions in CrowdfundToken for this)
+        CrowdfundToken token = CrowdfundToken(tokenAddress);
         assertEq(token.name(), name, "Token name should match.");
         assertEq(token.symbol(), symbol, "Token symbol should match.");
         assertEq(token.songURI(), songURI, "Song URI should match.");

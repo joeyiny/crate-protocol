@@ -5,13 +5,13 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 import {TestUtils} from "test/utils/TestUtils.sol";
 import {MockUSDC} from "test/mock/MockUSDC.sol";
-import {CrateFactoryV2} from "src/CrateFactoryV2.sol";
-import {CrateTokenV2} from "src/CrateTokenV2.sol";
+import {TokenFactory} from "src/TokenFactory.sol";
+import {CrowdfundToken} from "src/CrowdfundToken.sol";
 import {ICrateV2} from "src/interfaces/ICrateV2.sol";
 
-contract CrateTokenV2Test is TestUtils, ICrateV2 {
-    CrateFactoryV2 factory;
-    CrateTokenV2 token;
+contract CrowdfundTokenTest is TestUtils, ICrateV2 {
+    TokenFactory factory;
+    CrowdfundToken token;
 
     address uniswapRouter = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24; //Router on Base
     // address usdc = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913; //USDC on Base
@@ -31,7 +31,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         deal(usdc, owner, 100_000 * 1e6);
 
         vm.startPrank(owner);
-        factory = new CrateFactoryV2(usdc);
+        factory = new TokenFactory(usdc);
         string memory name = "TestToken";
         string memory symbol = "TTK";
         string memory songURI = "example.com";
@@ -39,12 +39,12 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
 
         IERC20(usdc).approve(address(factory), factory.launchCost());
         address tokenAddress = address(factory.createToken(name, symbol, songURI, salt, 5000e6));
-        token = CrateTokenV2(tokenAddress);
+        token = CrowdfundToken(tokenAddress);
         vm.stopPrank();
     }
 
     function test_UpdateTokenImplementation() public {
-        address newImplementation = address(new CrateTokenV2());
+        address newImplementation = address(new CrowdfundToken());
 
         // Non-owner should fail
         vm.startPrank(alice);
@@ -181,7 +181,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         IERC20(usdc).approve(address(factory), factory.launchCost());
 
         address tokenAddress = factory.createToken(name, symbol, songURI, salt, validGoal);
-        CrateTokenV2 validToken = CrateTokenV2(tokenAddress);
+        CrowdfundToken validToken = CrowdfundToken(tokenAddress);
         vm.stopPrank();
 
         assertEq(validToken.crowdfundGoal(), validGoal);
@@ -227,7 +227,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
         IERC20(usdc).approve(address(factory), factory.launchCost());
         address tokenAddress = factory.createToken(name, symbol, songURI, salt, newValidGoal);
-        CrateTokenV2 newToken = CrateTokenV2(tokenAddress);
+        CrowdfundToken newToken = CrowdfundToken(tokenAddress);
         vm.stopPrank();
 
         assertEq(newToken.crowdfundGoal(), newValidGoal);
@@ -465,7 +465,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
 
         IERC20(usdc).approve(address(factory), factory.launchCost());
         address newTokenAddress = factory.createToken("Test", "TST", "uri", bytes32(0), 5000e6);
-        CrateTokenV2 newToken = CrateTokenV2(newTokenAddress);
+        CrowdfundToken newToken = CrowdfundToken(newTokenAddress);
 
         IERC20(usdc).approve(address(newToken), 5_000 * 1e6);
         newToken.fund(5000e6);
@@ -491,13 +491,13 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
     }
 
     function test_coverage_cancelCrowdfund() public {
-        CrateTokenV2 bobsToken;
+        CrowdfundToken bobsToken;
         vm.startPrank(bob);
         bytes32 salt2 = keccak256(abi.encode("a", "a", "a"));
 
         IERC20(usdc).approve(address(factory), factory.launchCost());
         address bobTA = address(factory.createToken("a", "a", "a", salt2, 5000e6));
-        bobsToken = CrateTokenV2(bobTA);
+        bobsToken = CrowdfundToken(bobTA);
         vm.stopPrank();
 
         vm.startPrank(alice);

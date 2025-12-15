@@ -12,7 +12,7 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
  * This is a crowdfunded token launch.
  * Users crowdfund and receive nontransferable tokens. Once the goal is hit, then the tokens become transferable and a market is launched for the tokens.
  */
-contract CrateTokenV2 is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
+contract CrowdfundToken is ERC20Upgradeable, ReentrancyGuard, ICrateV2 {
     //IMMUTABLE
     address public usdcToken;
     address public protocolFeeDestination;

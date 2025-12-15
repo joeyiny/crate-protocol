@@ -5,15 +5,15 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 import {TestUtils} from "test/utils/TestUtils.sol";
 import {MockUSDC} from "test/mock/MockUSDC.sol";
-import {CrateFactoryV2} from "src/CrateFactoryV2.sol";
-import {CrateTokenV2} from "src/CrateTokenV2.sol";
+import {TokenFactory} from "src/TokenFactory.sol";
+import {CrowdfundToken} from "src/CrowdfundToken.sol";
 import {ICrateV2} from "src/interfaces/ICrateV2.sol";
 import {console} from "forge-std/console.sol";
 
-/// @dev forge test --match-contract CrateTokenV2Test -vvv
-contract CrateTokenV2Test is TestUtils, ICrateV2 {
-    CrateFactoryV2 factory;
-    CrateTokenV2 token;
+/// @dev forge test --match-contract CrowdfundTokenTest -vvv
+contract CrowdfundTokenTest is TestUtils, ICrateV2 {
+    TokenFactory factory;
+    CrowdfundToken token;
     address uniswapRouter = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24; //Router on Base
     address usdc = address(new MockUSDC());
     address artist = address(0x420);
@@ -33,7 +33,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         deal(usdc, artist, 100_000 * 1e6);
 
         vm.startPrank(owner);
-        factory = new CrateFactoryV2(usdc);
+        factory = new TokenFactory(usdc);
         vm.stopPrank();
         vm.startPrank(artist);
 
@@ -44,7 +44,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
 
         IERC20(usdc).approve(address(factory), factory.launchCost());
         address tokenAddress = address(factory.createToken(name, symbol, songURI, salt, 5000e6));
-        token = CrateTokenV2(tokenAddress);
+        token = CrowdfundToken(tokenAddress);
         vm.stopPrank();
     }
 
@@ -59,7 +59,7 @@ contract CrateTokenV2Test is TestUtils, ICrateV2 {
         bytes32 salt = keccak256(abi.encode(name, symbol, songURI));
         IERC20(usdc).approve(address(factory), factory.launchCost());
         address tokenAddress = address(factory.createToken(name, symbol, songURI, salt, 5000e6));
-        CrateTokenV2 token2 = CrateTokenV2(tokenAddress);
+        CrowdfundToken token2 = CrowdfundToken(tokenAddress);
 
         assertEq(token2.name(), name);
         assertEq(token2.symbol(), symbol);

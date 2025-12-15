@@ -7,11 +7,6 @@ evm_version = "cancun"
 optimizer_runs = 420_000
 fuzz_max_global_rejects = 420_000
 
-gas_reports = [
-    "CrateFactoryV2",
-    "CrateTokenV2"
-]
-
 remappings = [
     "@openzeppelin/=lib/openzeppelin-contracts/",
     "@openzeppelin-upgradeable/=lib/openzeppelin-contracts-upgradeable/",
